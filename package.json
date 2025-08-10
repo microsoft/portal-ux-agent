@@ -1,0 +1,19 @@
+{
+  "name": "portal-ux-agent",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Portal UX Agent with MCP Server",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev:mcp": "node --loader ts-node/esm src/simple-mcp-server.ts",
+    "dev:web": "node --loader ts-node/esm src/simple-web-server.ts",
+    "build": "tsc",
+    "demo": "node --loader ts-node/esm src/demo.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "ts-node": "^10.9.0"
+  }
+}
