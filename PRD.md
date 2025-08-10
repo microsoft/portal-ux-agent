@@ -1,7 +1,7 @@
 
-# Portal UX Agent
+# Portal UX Agent — Product Requirements Document (PRD)
 
-Provide the data you want to render, and the Portal UX Agent will turn it into a portal experience
+The Portal UX Agent turns structured or unstructed input and intent into a fully rendered, web-based portal experience. Provide the data and desired outcome (optional); the agent selects a layout template, composes UI components, and serves a shareable UI.
 
 ## User Interaction
 

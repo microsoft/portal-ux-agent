@@ -1,6 +1,13 @@
-# Tech Stack
+# Technical Design
+
+This document describes the architecture, interfaces, and contracts for the Portal UX Agent.
+
+## 1) Runtime and Frameworks
 
 - This UX Agent runs as a NodeJS server
+
+## 2) High-Level Architecture
+
 - It exposed 2 different end points,
     - 1 set of end points  to take MCP request from user
     - 1 set of end points to server the UI rendering
