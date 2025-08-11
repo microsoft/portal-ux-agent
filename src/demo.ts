@@ -9,7 +9,10 @@ function processIntent(message: string) {
   let template = 'dashboard-cards-grid';
   let components = ['kpi-card', 'chart'];
   
-  if (message.toLowerCase().includes('kanban') || message.toLowerCase().includes('board')) {
+  if (message.toLowerCase().includes('dashboard') || message.toLowerCase().includes('metrics') || message.toLowerCase().includes('kpi')) {
+    template = 'dashboard-cards-grid';
+    components = ['kpi-card', 'chart'];
+  } else if (message.toLowerCase().includes('kanban') || message.toLowerCase().includes('board')) {
     template = 'board-kanban';
     components = ['kanban-column', 'kanban-card'];
   } else if (message.toLowerCase().includes('portal') || message.toLowerCase().includes('navigation')) {

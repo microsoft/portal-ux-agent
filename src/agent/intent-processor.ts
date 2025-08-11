@@ -26,7 +26,7 @@ export async function processUserIntent(message: string): Promise<Intent> {
   };
 
   // Simple keyword matching for demo
-  if (message.toLowerCase().includes('dashboard')) {
+  if (message.toLowerCase().includes('dashboard') || message.toLowerCase().includes('metrics') || message.toLowerCase().includes('kpi')) {
     intent.dataStructure = 'grid';
     intent.suggestedTemplate = 'dashboard-cards-grid';
     intent.components = ['kpi-card', 'chart', 'table'];
