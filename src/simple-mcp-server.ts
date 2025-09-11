@@ -22,14 +22,33 @@ class SimpleMCPServer {
   private compositions = new Map<string, any>();
 
   constructor() {
-    // Bind stdin/stdout for MCP communication
+    // Bind stdin/stdout for MCP communication (line-buffered NDJSON style)
     if (typeof process !== 'undefined') {
-      process.stdin.on('data', (data) => {
-        try {
-          const message: MCPMessage = JSON.parse(data.toString());
-          this.handleMessage(message);
-        } catch (error) {
-          console.error('Failed to parse MCP message:', error);
+      process.stdin.setEncoding('utf8');
+      let buffer = '';
+      process.stdin.on('data', (chunk) => {
+        buffer += chunk;
+        let newlineIndex: number;
+        while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
+          const rawLine = buffer.slice(0, newlineIndex);
+            // Advance buffer
+          buffer = buffer.slice(newlineIndex + 1);
+          const line = rawLine.trim();
+          if (!line) continue; // skip empty lines
+          try {
+            // Support optional JSON array (batch) as a convenience
+            if (line.startsWith('[') && line.endsWith(']')) {
+              const messages: MCPMessage[] = JSON.parse(line);
+              for (const msg of messages) {
+                this.handleMessage(msg);
+              }
+            } else {
+              const message: MCPMessage = JSON.parse(line);
+              this.handleMessage(message);
+            }
+          } catch (error) {
+            console.error('Failed to parse MCP line:', line, error);
+          }
         }
       });
     }
