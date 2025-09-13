@@ -25,6 +25,27 @@ npm run dev:combined
 ```
 UI on http://localhost:3000, MCP HTTP on http://localhost:3001.
 
+## Docker
+
+Build and run with Docker (exposes ports 3000 and 3001):
+
+```bash
+docker build -t portal-ux-agent:local .
+docker run --rm -p 3000:3000 -p 3001:3001 \
+  -e UI_PORT=3000 -e MCP_PORT=3001 portal-ux-agent:local
+```
+
+Or use Compose:
+
+```bash
+docker compose up --build
+```
+
+Test endpoints:
+- MCP health: `curl http://localhost:3001/mcp/health`
+- Create composition: `curl -s -X POST http://localhost:3001/mcp/tools/call -H "Content-Type: application/json" -d '{"name":"create_portal_ui","arguments":{"message":"Create a dashboard with KPIs"}}'`
+- View UI: open the returned `viewUrl` or `http://localhost:3000/ui/<sessionId>`
+
 ## Architecture
 
 - **MCP Server**: Handles incoming messages via Model Context Protocol

@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  portal-ux-agent:
+    build: .
+    image: portal-ux-agent:local
+    environment:
+      - NODE_ENV=production
+      - UI_PORT=3000
+      - MCP_PORT=3001
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    restart: unless-stopped
