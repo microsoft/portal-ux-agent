@@ -2,6 +2,7 @@ import { Intent } from '../agent/intent-processor.js';
 import { loadTemplate, Template } from '../templates/template-loader.js';
 import { mapDataToComponents, Component } from '../components/component-mapper.js';
 import { v4 as uuidv4 } from 'uuid';
+import { setComposition as storeSetComposition, getComposition as storeGetComposition } from '../shared/composition-store.js';
 
 export interface UIComposition {
   sessionId: string;
@@ -11,9 +12,6 @@ export interface UIComposition {
   scripts: string[];
   templateData: Template;
 }
-
-// In-memory storage for compositions (use Redis in production)
-const compositions = new Map<string, UIComposition>();
 
 export async function renderUI(intent: Intent): Promise<UIComposition> {
   const sessionId = uuidv4();
@@ -38,12 +36,31 @@ export async function renderUI(intent: Intent): Promise<UIComposition> {
     templateData: template
   };
   
-  // Store composition
-  compositions.set(sessionId, composition);
+  // Store composition in the shared store
+  storeSetComposition({
+    sessionId,
+    template: composition.template,
+    components: composition.components.map(c => ({ id: c.id, type: c.type, props: c.props, slot: c.slot })),
+    styles: composition.styles,
+    scripts: composition.scripts,
+    templateData: composition.templateData,
+    userMessage: intent.userGoal,
+    createdAt: Date.now(),
+  });
   
   return composition;
 }
 
 export function getComposition(sessionId: string): UIComposition | undefined {
-  return compositions.get(sessionId);
+  const stored = storeGetComposition(sessionId) as any;
+  if (!stored) return undefined;
+  // Best-effort cast back to UIComposition
+  return {
+    sessionId: stored.sessionId,
+    template: stored.template,
+    components: stored.components,
+    styles: stored.styles || [],
+    scripts: stored.scripts || [],
+    templateData: stored.templateData,
+  } as UIComposition;
 }

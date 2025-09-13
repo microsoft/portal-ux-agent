@@ -1,6 +1,7 @@
 // Simple HTTP Server without external dependencies
 import { createServer } from 'http';
 import { parse } from 'url';
+import { getComposition as storeGetComposition, setComposition as storeSetComposition } from './shared/composition-store.js';
 
 interface UIComposition {
   sessionId: string;
@@ -16,9 +17,10 @@ interface UIComposition {
 
 class SimpleWebServer {
   private compositions = new Map<string, UIComposition>();
-  private port = 3000;
+  private port: number;
 
-  constructor() {
+  constructor(port = Number(process.env.UI_PORT) || 3000) {
+    this.port = port;
     // Add some sample compositions for demo
     this.addSampleCompositions();
   }
@@ -50,6 +52,16 @@ class SimpleWebServer {
       userMessage: 'Create a sales dashboard'
     };
     this.compositions.set('demo123', sampleComposition);
+    // Also seed shared store so other servers can access the same state
+    try {
+      storeSetComposition({
+        sessionId: sampleComposition.sessionId,
+        template: sampleComposition.template,
+        components: sampleComposition.components,
+        userMessage: sampleComposition.userMessage,
+        createdAt: Date.now(),
+      });
+    } catch {}
   }
 
   start() {
@@ -91,7 +103,7 @@ class SimpleWebServer {
   }
 
   private handleUIRequest(sessionId: string, res: any) {
-    const composition = this.compositions.get(sessionId);
+    const composition = this.compositions.get(sessionId) || (storeGetComposition(sessionId) as any);
     if (!composition) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       res.end('Composition not found');
@@ -104,7 +116,7 @@ class SimpleWebServer {
   }
 
   private handleAPIRequest(sessionId: string, res: any) {
-    const composition = this.compositions.get(sessionId);
+    const composition = this.compositions.get(sessionId) || (storeGetComposition(sessionId) as any);
     if (!composition) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Composition not found' }));
@@ -346,6 +358,12 @@ class SimpleWebServer {
   }
 }
 
-// Start the server
-const server = new SimpleWebServer();
-server.start();
+export function startSimpleWebServer(port?: number) {
+  const server = new SimpleWebServer(port);
+  server.start();
+}
+
+// Auto-start unless disabled (useful for combined starter)
+if (process.env.START_SIMPLE_WEB_SERVER !== '0') {
+  startSimpleWebServer();
+}

@@ -19,6 +19,12 @@ npm run dev:web
 npm run dev:mcp
 ```
 
+Alternatively, start both (two ports, shared memory) in one process:
+```bash
+npm run dev:combined
+```
+UI on http://localhost:3000, MCP HTTP on http://localhost:3001.
+
 ## Architecture
 
 - **MCP Server**: Handles incoming messages via Model Context Protocol

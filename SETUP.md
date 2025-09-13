@@ -19,16 +19,22 @@
    ```
 
 3. **Start the web server:**
-   ```bash
-   npm run dev:web
-   ```
-   - Visit: http://localhost:3000/ui/demo123
-   - API: http://localhost:3000/api/compositions/demo123
+```bash
+npm run dev:web
+```
+- Visit: http://localhost:3000/ui/demo123
+- API: http://localhost:3000/api/compositions/demo123
 
 4. **Start the MCP server** (in another terminal):
-   ```bash
-   npm run dev:mcp
-   ```
+```bash
+npm run dev:mcp
+```
+
+Or run both in a single process (two ports, shared memory):
+```bash
+npm run dev:combined
+```
+UI on http://localhost:3000, MCP HTTP on http://localhost:3001.
 
 ## MCP Integration
 
