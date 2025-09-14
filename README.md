@@ -79,4 +79,20 @@ Available templates:
 - `portal-leftnav`: Enterprise portal with left navigation
 - `board-kanban`: Kanban board with drag-and-drop columns
 
+## Testing Utilities
+
+Helper scripts now live in `tests/`:
+
+PowerShell quick tool call:
+```powershell
+pwsh tests/call-tool.ps1 -Message "dashboard with KPIs"
+```
+
+End-to-end validation (health, tools list, tool call, fetch UI HTML):
+```powershell
+pwsh tests/validate-docker.ps1 -Message "ui smoke"
+```
+
+Run against a Docker container (ensure it's running on ports 3000/3001).
+
 
