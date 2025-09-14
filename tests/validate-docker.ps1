@@ -6,6 +6,18 @@ param(
   [string]$UserId = ""
 )
 
+Write-Host "=== Killing all portal-ux-agent containers ===" -ForegroundColor Cyan
+docker ps -aq --filter "ancestor=portal-ux-agent" | ForEach-Object { docker rm -f $_ }
+docker rm -f portal-ux-agent-run 2>$null
+
+Write-Host "=== Building image ===" -ForegroundColor Cyan
+docker build -t portal-ux-agent .
+
+Write-Host "=== Running container ===" -ForegroundColor Cyan
+docker run -d --name portal-ux-agent-run -p 3000:3000 -p 3001:3001 portal-ux-agent
+
+Start-Sleep -Seconds 3
+
 Write-Host "=== Checking MCP health ===" -ForegroundColor Cyan
 $health = Invoke-RestMethod -Uri "http://localhost:$McpPort/mcp/health" -Method Get
 $health | ConvertTo-Json
@@ -15,9 +27,9 @@ $tools = Invoke-RestMethod -Uri "http://localhost:$McpPort/mcp/tools" -Method Ge
 $tools | ConvertTo-Json -Depth 4
 
 Write-Host "=== Calling tool: create_portal_ui ===" -ForegroundColor Cyan
-$args = @{ message = $Message }
-if($UserId -and $UserId.Trim().Length -gt 0){ $args.userId = $UserId }
-$payload = @{ name='create_portal_ui'; arguments=$args } | ConvertTo-Json -Depth 4
+$toolArgs = @{ message = $Message }
+if($UserId -and $UserId.Trim().Length -gt 0){ $toolArgs.userId = $UserId }
+$payload = @{ name='create_portal_ui'; arguments=$toolArgs } | ConvertTo-Json -Depth 4
 $response = Invoke-RestMethod -Uri "http://localhost:$McpPort/mcp/tools/call" -Method Post -Body $payload -ContentType 'application/json'
 $response | ConvertTo-Json -Depth 6
 
