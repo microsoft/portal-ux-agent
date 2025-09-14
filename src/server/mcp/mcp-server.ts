@@ -9,10 +9,12 @@ import {
 import { z } from 'zod';
 import { processUserIntent } from '../../agent/intent-processor.js';
 import { renderUI } from '../../rendering/ui-renderer.js';
+import { DEFAULT_USER_ID } from '../../shared/config.js';
 
 // Message schema for the portal UI tool
 const PortalUIToolSchema = z.object({
-  message: z.string().describe('User message describing the UI they want to create')
+  message: z.string().describe('User message describing the UI they want to create'),
+  userId: z.string().optional().describe('Optional user id (defaults to "default")')
 });
 
 class PortalMCPServer {
@@ -69,8 +71,9 @@ class PortalMCPServer {
       
       try {
         // Process the message through the agent pipeline
-        const intent = await processUserIntent(args.message);
-        const uiComposition = await renderUI(intent);
+  const userId = args.userId?.trim() || DEFAULT_USER_ID;
+  const intent = await processUserIntent(args.message);
+  const uiComposition = await renderUI(intent, userId);
         
         return {
           content: [
@@ -78,8 +81,9 @@ class PortalMCPServer {
               type: 'text',
               text: JSON.stringify({
                 success: true,
+                userId,
                 sessionId: uiComposition.sessionId,
-                viewUrl: `http://localhost:3000/ui/${uiComposition.sessionId}`,
+                viewUrl: `http://localhost:3000/ui/${userId}`,
                 composition: uiComposition
               }, null, 2)
             }

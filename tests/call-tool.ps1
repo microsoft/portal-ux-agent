@@ -1,10 +1,13 @@
 # Helper script: invoke create_portal_ui tool via MCP HTTP API
 param(
   [string]$Message = "sample dashboard",
-  [int]$Port = 3001
+  [int]$Port = 3001,
+  [string]$UserId = ""
 )
 
-$payload = @{ name = 'create_portal_ui'; arguments = @{ message = $Message } } | ConvertTo-Json -Depth 4
+$toolArgs = @{ message = $Message }
+if($UserId -and $UserId.Trim().Length -gt 0){ $toolArgs.userId = $UserId }
+$payload = @{ name = 'create_portal_ui'; arguments = $toolArgs } | ConvertTo-Json -Depth 4
 Write-Host "POST /mcp/tools/call -> $Message" -ForegroundColor Cyan
 $response = Invoke-RestMethod -Uri "http://localhost:$Port/mcp/tools/call" -Method Post -Body $payload -ContentType 'application/json'
 $response | ConvertTo-Json -Depth 6

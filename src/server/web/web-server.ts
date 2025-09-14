@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { getComposition } from '../../rendering/ui-renderer.js';
+import { getCompositionByUser } from '../../rendering/ui-renderer.js';
 import { renderReactUI } from './react-renderer.js';
 
 const app = express();
@@ -11,9 +11,9 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // UI rendering endpoint
-app.get('/ui/:sessionId', async (req, res) => {
-  const { sessionId } = req.params;
-  const composition = getComposition(sessionId);
+app.get('/ui/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const composition = getCompositionByUser(userId);
   
   if (!composition) {
     return res.status(404).json({ error: 'Composition not found' });
@@ -30,9 +30,9 @@ app.get('/ui/:sessionId', async (req, res) => {
 });
 
 // API endpoint to get composition data
-app.get('/api/compositions/:sessionId', (req, res) => {
-  const { sessionId } = req.params;
-  const composition = getComposition(sessionId);
+app.get('/api/compositions/:userId', (req, res) => {
+  const { userId } = req.params;
+  const composition = getCompositionByUser(userId);
   
   if (!composition) {
     return res.status(404).json({ error: 'Composition not found' });

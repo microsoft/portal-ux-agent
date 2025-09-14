@@ -3,6 +3,7 @@ import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { parse } from 'url';
 import { processUserIntent } from '../../agent/intent-processor.js';
 import { renderUI } from '../../rendering/ui-renderer.js';
+import { DEFAULT_USER_ID } from '../../shared/config.js';
 import { subscribeSession, emitSessionEvent } from '../../shared/event-bus.js';
 
 function sendJson(res: ServerResponse, status: number, body: any) {
@@ -58,6 +59,7 @@ export function startHttpMcpServer(port = Number(process.env.MCP_PORT) || 3001) 
                 type: 'object',
                 properties: {
                   message: { type: 'string', description: 'User message describing the UI to create' },
+                  userId: { type: 'string', description: 'Optional user id (defaults to "default")' }
                 },
                 required: ['message'],
               },
@@ -81,8 +83,9 @@ export function startHttpMcpServer(port = Number(process.env.MCP_PORT) || 3001) 
         }
 
         try {
+          const userId = (args.userId && String(args.userId).trim()) || DEFAULT_USER_ID;
           const intent = await processUserIntent(args.message);
-          const composition = await renderUI(intent);
+          const composition = await renderUI(intent, userId);
           // Emit events for this session (after we know the sessionId)
           emitSessionEvent(composition.sessionId, 'intent:completed', {
             userGoal: intent.userGoal,
@@ -94,12 +97,13 @@ export function startHttpMcpServer(port = Number(process.env.MCP_PORT) || 3001) 
             components: composition.components?.length || 0,
           });
           emitSessionEvent(composition.sessionId, 'render:ready', {
-            viewUrl: `http://localhost:${uiPort}/ui/${composition.sessionId}`,
+            viewUrl: `http://localhost:${uiPort}/ui/${encodeURIComponent(userId)}`,
           });
           return sendJson(res, 200, {
             success: true,
+            userId,
             sessionId: composition.sessionId,
-            viewUrl: `http://localhost:${uiPort}/ui/${composition.sessionId}`,
+            viewUrl: `http://localhost:${uiPort}/ui/${encodeURIComponent(userId)}`,
             composition,
           });
         } catch (e: any) {

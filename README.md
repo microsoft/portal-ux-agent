@@ -23,7 +23,7 @@ Alternatively, start both (two ports, shared memory) in one process:
 ```bash
 npm run dev:combined
 ```
-UI on http://localhost:3000, MCP HTTP on http://localhost:3001.
+UI on http://localhost:3000 (default user composition at /ui/default), MCP HTTP on http://localhost:3001.
 
 ## Docker
 
@@ -44,7 +44,7 @@ docker compose up --build
 Test endpoints:
 - MCP health: `curl http://localhost:3001/mcp/health`
 - Create composition: `curl -s -X POST http://localhost:3001/mcp/tools/call -H "Content-Type: application/json" -d '{"name":"create_portal_ui","arguments":{"message":"Create a dashboard with KPIs"}}'`
-- View UI: open the returned `viewUrl` or `http://localhost:3000/ui/<sessionId>`
+- View UI: open the returned `viewUrl` (now `/ui/<userId>`, defaults to `/ui/default`)
 
 ## Architecture
 
@@ -61,7 +61,7 @@ The MCP server accepts messages like:
 - "Build a kanban board for project tasks"
 - "Make a portal with navigation for admin tools"
 
-The system will generate a composition and provide a URL to view the rendered UI.
+The system will generate (or overwrite) the latest composition for the specified `userId` (or `default`) and provide a URL `/ui/<userId>` to view it.
 
 ## Components
 
@@ -93,6 +93,6 @@ End-to-end validation (health, tools list, tool call, fetch UI HTML):
 pwsh tests/validate-docker.ps1 -Message "ui smoke"
 ```
 
-Run against a Docker container (ensure it's running on ports 3000/3001).
+Run against a Docker container (ensure it's running on ports 3000/3001). Include an optional `userId` by adding `"userId":"alice"` inside the `arguments` object of the tool call JSON.
 
 

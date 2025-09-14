@@ -2,7 +2,8 @@
 param(
   [int]$UiPort = 3000,
   [int]$McpPort = 3001,
-  [string]$Message = "dashboard demo"
+  [string]$Message = "dashboard demo",
+  [string]$UserId = ""
 )
 
 Write-Host "=== Checking MCP health ===" -ForegroundColor Cyan
@@ -14,7 +15,9 @@ $tools = Invoke-RestMethod -Uri "http://localhost:$McpPort/mcp/tools" -Method Ge
 $tools | ConvertTo-Json -Depth 4
 
 Write-Host "=== Calling tool: create_portal_ui ===" -ForegroundColor Cyan
-$payload = @{ name='create_portal_ui'; arguments=@{ message=$Message } } | ConvertTo-Json -Depth 4
+$args = @{ message = $Message }
+if($UserId -and $UserId.Trim().Length -gt 0){ $args.userId = $UserId }
+$payload = @{ name='create_portal_ui'; arguments=$args } | ConvertTo-Json -Depth 4
 $response = Invoke-RestMethod -Uri "http://localhost:$McpPort/mcp/tools/call" -Method Post -Body $payload -ContentType 'application/json'
 $response | ConvertTo-Json -Depth 6
 
