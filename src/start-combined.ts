@@ -16,3 +16,5 @@ startHttpMcpServer(mcpPort);
 console.log(`[combined] UI: http://localhost:${uiPort}`);
 console.log(`[combined] MCP: http://localhost:${mcpPort}`);
 
+// Make this file a module
+export {};
