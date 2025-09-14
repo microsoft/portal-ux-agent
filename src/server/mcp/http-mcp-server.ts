@@ -2,7 +2,7 @@
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { parse } from 'url';
 import { processUserIntent } from '../../ux-architect-agent/intent-processor.js';
-import { renderUI } from '../../rendering/ui-renderer.js';
+import { renderUI } from '../../ui-builder-agent/ui-renderer';
 import { DEFAULT_USER_ID } from '../../shared/config.js';
 import { subscribeSession, emitSessionEvent } from '../../shared/event-bus.js';
 

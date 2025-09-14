@@ -1,7 +1,7 @@
 // Simple HTTP Server without external dependencies
 import { createServer } from 'http';
 import { parse } from 'url';
-import { getCompositionByUser, renderUI } from './rendering/ui-renderer.js';
+import { getCompositionByUser, renderUI } from './ui-builder-agent/ui-renderer';
 import { processUserIntent } from './ux-architect-agent/intent-processor.js';
 import { DEFAULT_USER_ID } from './shared/config.js';
 

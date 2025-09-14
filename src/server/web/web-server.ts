@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { getCompositionByUser } from '../../rendering/ui-renderer.js';
+import { getCompositionByUser } from '../../ui-builder-agent/ui-renderer';
 import { renderReactUI } from './react-renderer.js';
 
 const app = express();

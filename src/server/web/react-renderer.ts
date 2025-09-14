@@ -1,11 +1,12 @@
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { UIComposition } from '../../rendering/ui-renderer.js';
+import { UIComposition } from '../../ui-builder-agent/ui-renderer';
+import { Component } from '../../components/component-mapper.js';
 import { ComponentRegistry } from './index.js';
 
 export async function renderReactUI(composition: UIComposition): Promise<string> {
   // Create the React component tree based on composition
-  const componentElements = composition.components.map(component => {
+  const componentElements = composition.components.map((component: Component) => {
     const ComponentClass = ComponentRegistry.get(component.type);
     if (!ComponentClass) {
       return React.createElement('div', { key: component.id }, `Unknown component: ${component.type}`);
@@ -19,7 +20,7 @@ export async function renderReactUI(composition: UIComposition): Promise<string>
 
   // Group components by slot
   const slotComponents: Record<string, React.ReactElement[]> = {};
-  composition.components.forEach((component, index) => {
+  composition.components.forEach((component: Component, index: number) => {
     if (!slotComponents[component.slot]) {
       slotComponents[component.slot] = [];
     }
@@ -45,7 +46,7 @@ export async function renderReactUI(composition: UIComposition): Promise<string>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Portal UI - ${composition.sessionId}</title>
-      ${composition.styles.map(style => `<link rel="stylesheet" href="${style}">`).join('')}
+  ${composition.styles.map((style: string) => `<link rel="stylesheet" href="${style}">`).join('')}
       <style>
         body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
         .dashboard-container { padding: 20px; }
@@ -64,7 +65,7 @@ export async function renderReactUI(composition: UIComposition): Promise<string>
     </head>
     <body>
       ${finalHTML}
-      ${composition.scripts.map(script => `<script src="${script}"></script>`).join('')}
+  ${composition.scripts.map((script: string) => `<script src="${script}"></script>`).join('')}
     </body>
     </html>
   `;

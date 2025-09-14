@@ -70,7 +70,7 @@ const structure = [
   '│   └── component-mapper.ts', 
   '├── templates/',
   '│   └── template-loader.ts',
-  '├── rendering/',
+  '├── ui-builder-agent/',
   '│   └── ui-renderer.ts',
   '├── server/',
   '│   ├── mcp/',
