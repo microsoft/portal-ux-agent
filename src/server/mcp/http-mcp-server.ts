@@ -1,7 +1,7 @@
 // Minimal HTTP MCP-like server (same-process) to expose tools over HTTP
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { parse } from 'url';
-import { processUserIntent } from '../../agent/intent-processor.js';
+import { processUserIntent } from '../../ux-architect-agent/intent-processor.js';
 import { renderUI } from '../../rendering/ui-renderer.js';
 import { DEFAULT_USER_ID } from '../../shared/config.js';
 import { subscribeSession, emitSessionEvent } from '../../shared/event-bus.js';

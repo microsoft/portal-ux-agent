@@ -2,7 +2,7 @@
 import { createServer } from 'http';
 import { parse } from 'url';
 import { getCompositionByUser, renderUI } from './rendering/ui-renderer.js';
-import { processUserIntent } from './agent/intent-processor.js';
+import { processUserIntent } from './ux-architect-agent/intent-processor.js';
 import { DEFAULT_USER_ID } from './shared/config.js';
 
 interface SimpleRenderableComposition {

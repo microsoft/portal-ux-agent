@@ -7,7 +7,7 @@ import {
   McpError
 } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import { processUserIntent } from '../../agent/intent-processor.js';
+import { processUserIntent } from '../../ux-architect-agent/intent-processor.js';
 import { renderUI } from '../../rendering/ui-renderer.js';
 import { DEFAULT_USER_ID } from '../../shared/config.js';
 
