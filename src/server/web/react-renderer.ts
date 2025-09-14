@@ -1,12 +1,11 @@
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { UIComposition } from '../../ui-builder-agent/ui-renderer';
-import { Component } from '../../ui-component-library/component-mapper.js';
-import { ComponentRegistry } from './index.js';
+import { UIComposition } from '../../ui-builder-agent/ui-renderer.js';
+import { ComponentRegistry } from '../../ui-component-library/registry.js';
 
 export async function renderReactUI(composition: UIComposition): Promise<string> {
   // Create the React component tree based on composition
-  const componentElements = composition.components.map((component: Component) => {
+  const componentElements = composition.components.map((component: any) => {
     const ComponentClass = ComponentRegistry.get(component.type);
     if (!ComponentClass) {
       return React.createElement('div', { key: component.id }, `Unknown component: ${component.type}`);
@@ -20,7 +19,7 @@ export async function renderReactUI(composition: UIComposition): Promise<string>
 
   // Group components by slot
   const slotComponents: Record<string, React.ReactElement[]> = {};
-  composition.components.forEach((component: Component, index: number) => {
+  composition.components.forEach((component: any, index: number) => {
     if (!slotComponents[component.slot]) {
       slotComponents[component.slot] = [];
     }
@@ -58,17 +57,126 @@ export async function renderReactUI(composition: UIComposition): Promise<string>
         .main-content { flex: 1; display: flex; flex-direction: column; }
         .top-header { padding: 20px; border-bottom: 1px solid #ddd; }
         .content-area { flex: 1; padding: 20px; }
-        .kanban-board { padding: 20px; }
-        .board-columns { display: flex; gap: 20px; }
-        .card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
       </style>
     </head>
     <body>
-      ${finalHTML}
-  ${composition.scripts.map((script: string) => `<script src="${script}"></script>`).join('')}
+      <div class="portal-container">
+        <div class="left-nav">
+          ${renderToString(slotComponents['nav'] ? React.createElement(React.Fragment, null, ...slotComponents['nav']) : React.createElement('div', null))}
+        </div>
+        <div class="main-content">
+          <div class="top-header">
+            ${renderToString(slotComponents['header'] ? React.createElement(React.Fragment, null, ...slotComponents['header']) : React.createElement('div', null))}
+          </div>
+          <div class="content-area">
+            ${renderToString(slotComponents['main'] ? React.createElement(React.Fragment, null, ...slotComponents['main']) : React.createElement('div', null))}
+          </div>
+        </div>
+      </div>
     </body>
     </html>
   `;
 
   return fullHTML;
+}
+
+export function renderComponent(component: any): string {
+  const Component = ComponentRegistry.get(component.type);
+  if (!Component) {
+    return `<div class="missing-component">Missing component: ${component.type}</div>`;
+  }
+  try {
+    return renderToString(React.createElement(Component as any, component.props || {}));
+  } catch (err) {
+    return `<div class="component-error">Error rendering ${component.type}: ${(err as Error).message}</div>`;
+  }
+}
+
+export function renderLayout(layout: any): string {
+  if (!layout || !layout.rows) return '<div class="empty-layout">No layout defined</div>';
+  return layout.rows.map((row: any) => `
+    <div class="row" style="display:flex; gap:16px; margin-bottom:16px;">
+      ${row.columns.map((col: any) => `
+        <div class="col" style="flex:${col.size || 1}; display:flex; flex-direction:column; gap:16px;">
+          ${(col.components || []).map((c: any) => `
+            <div class="component-wrapper">${renderComponent(c)}</div>
+          `).join('')}
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+export function renderNavigation(nav: any): string {
+  if (!nav || !nav.items) return '';
+  return `
+    <nav style="width:220px; padding:16px; background:#fff; border-right:1px solid #eee;">
+      <h3 style="margin-top:0">${nav.title || 'Navigation'}</h3>
+      ${(nav.items || []).map((item: any) => renderComponent({ type: 'NavItem', props: item })).join('')}
+    </nav>
+  `;
+}
+
+export function renderHeader(header: any): string {
+  if (!header) return '';
+  return `
+    <header style="padding:16px; background:#fff; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between;">
+      <h1 style="margin:0; font-size:20px;">${header.title || 'Portal'}</h1>
+      <div class="header-actions">
+        ${(header.actions || []).map((action: any) => `
+          <button style="margin-left:8px; padding:6px 12px;">${action.label || 'Action'}</button>
+        `).join('')}
+      </div>
+    </header>
+  `;
+}
+
+export function renderKanban(kanban: any): string {
+  if (!kanban || !kanban.columns) return '';
+  return `
+    <div class="kanban" style="display:flex; gap:16px; overflow-x:auto; padding:8px;">
+      ${(kanban.columns || []).map((col: any) => renderComponent({ type: 'KanbanColumn', props: col })).join('')}
+    </div>
+  `;
+}
+
+export function renderPage(ui: any): string {
+  const navigation = renderNavigation(ui.navigation);
+  const header = renderHeader(ui.header);
+  const layout = renderLayout(ui.layout);
+  const kanban = renderKanban(ui.kanban);
+
+  return `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>${ui.title || 'Portal UI'}</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; background: #f3f4f6; color: #1f2937; }
+      .row { }
+      .card { background: white; padding: 16px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+      .kpi-card .value { font-size: 28px; font-weight: bold; margin: 8px 0; }
+      nav a { display:block; padding:8px 4px; border-radius:4px; }
+      nav a:hover { background:#f0f0f0; }
+      .trend-positive { color: green; }
+      .trend-negative { color: red; }
+      .trend-neutral { color: gray; }
+      .kanban { margin-top:16px; }
+    </style>
+  </head>
+  <body>
+    <div style="display:flex; min-height:100vh;">
+      ${navigation}
+      <div style="flex:1; display:flex; flex-direction:column;">
+        ${header}
+        <main style="padding:16px; flex:1;">
+          ${layout}
+          ${kanban}
+        </main>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
 }

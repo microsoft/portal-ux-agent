@@ -8,7 +8,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { processUserIntent } from '../../ux-architect-agent/intent-processor.js';
-import { renderUI } from '../../ui-builder-agent/ui-renderer';
+import { renderUI } from '../../ui-builder-agent/ui-renderer.js';
 import { DEFAULT_USER_ID } from '../../shared/config.js';
 
 // Message schema for the portal UI tool
