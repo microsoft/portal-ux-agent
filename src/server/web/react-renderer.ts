@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { UIComposition } from '../../ui-builder-agent/ui-renderer';
-import { Component } from '../../components/component-mapper.js';
+import { Component } from '../../ui-component-library/component-mapper.js';
 import { ComponentRegistry } from './index.js';
 
 export async function renderReactUI(composition: UIComposition): Promise<string> {

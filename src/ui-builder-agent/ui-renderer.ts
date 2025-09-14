@@ -1,6 +1,6 @@
 import { Intent } from '../ux-architect-agent/intent-processor.js';
 import { loadTemplate, Template } from '../templates/template-loader.js';
-import { mapDataToComponents, Component } from '../components/component-mapper.js';
+import { mapDataToComponents, Component } from '../ui-component-library/component-mapper.js';
 import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_USER_ID } from '../shared/config.js';
 

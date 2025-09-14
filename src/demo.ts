@@ -66,7 +66,7 @@ const structure = [
   'src/',
   '├── agent/',
   '│   └── intent-processor.ts',
-  '├── components/',
+  '├── ui-component-library/',
   '│   └── component-mapper.ts', 
   '├── templates/',
   '│   └── template-loader.ts',

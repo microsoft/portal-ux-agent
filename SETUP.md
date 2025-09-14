@@ -109,6 +109,6 @@ User Message → Intent Processor → Template Matcher → Component Mapper → 
 ## Extending
 
 1. **Add new templates** in `src/templates/template-loader.ts`
-2. **Add new components** in `src/components/component-mapper.ts`
+2. **Add new components** in `src/ui-component-library/component-mapper.ts`
 3. **Improve intent processing** in `src/agent/intent-processor.ts`
 4. **Add UI libraries** by extending the component registry

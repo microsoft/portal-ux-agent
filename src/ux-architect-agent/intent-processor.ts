@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { loadTemplate } from '../templates/template-loader.js';
-import { mapDataToComponents } from '../components/component-mapper.js';
 
 // Intent schema
 const IntentSchema = z.object({
