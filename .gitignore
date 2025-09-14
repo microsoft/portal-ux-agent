@@ -99,5 +99,12 @@ temp/
 ehthumbs.db
 Thumbs.db
 
+# Project-specific temporary files
+*.bak
+*.tmp
+temp_*.txt
+combined.*.log
+*.ignore
+
 # Azure deployment files
 .azure/

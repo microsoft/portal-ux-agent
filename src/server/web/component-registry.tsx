@@ -1,6 +1,5 @@
 import React from 'react';
 
-// Basic React components for rendering
 export const KpiCard: React.FC<{ title: string; value: string; trend?: string; icon?: string }> = ({ title, value, trend = 'neutral' }) => (
   <div className="card kpi-card">
     <h3>{title}</h3>
@@ -102,7 +101,6 @@ export const KanbanCard: React.FC<{ title: string; description?: string; assigne
   </div>
 );
 
-// Component registry for dynamic loading
 export class ComponentRegistry {
   private static components = new Map<string, React.ComponentType<any>>([
     ['KpiCard', KpiCard],
