@@ -1,8 +1,7 @@
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { UIComposition } from '../../rendering/ui-renderer.js';
-// @ts-ignore Temporary: TS fails to see exported class though JS emits it
-import { ComponentRegistry } from './component-registry.js';
+import { ComponentRegistry } from './index.js';
 
 export async function renderReactUI(composition: UIComposition): Promise<string> {
   // Create the React component tree based on composition
