@@ -5,9 +5,8 @@
   "description": "Portal UX Agent with MCP Server",
   "main": "dist/index.js",
   "scripts": {
-    "dev:mcp": "node --loader ts-node/esm src/simple-mcp-server.ts",
+    "dev:mcp:http": "node --loader ts-node/esm src/server/mcp/unified-http-mcp-server.ts",
     "dev:web": "node --loader ts-node/esm src/simple-web-server.ts",
-    "dev:mcp:http": "node --loader ts-node/esm src/server/mcp/http-mcp-server.ts",
     "dev:combined": "node --loader ts-node/esm src/start-combined.ts",
     "build": "tsc",
     "demo": "node --loader ts-node/esm src/demo.ts"
