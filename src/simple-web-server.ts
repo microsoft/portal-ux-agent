@@ -45,6 +45,8 @@ class SimpleWebServer {
 
       if (pathname === '/playground') {
         this.handlePlayground(res);
+      } else if (pathname === '/playground.js') {
+        this.handlePlaygroundScript(res);
       } else if (pathname.startsWith('/ui/')) {
         const userId = pathname.split('/ui/')[1];
         this.handleUIRequest(userId, res);
@@ -100,59 +102,72 @@ class SimpleWebServer {
     }
   }
 
+  private handlePlaygroundScript(res: any) {
+    try {
+      const js = this.getPlaygroundScript();
+      res.writeHead(200, { 'Content-Type': 'application/javascript' });
+      res.end(js);
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('Playground script failed');
+    }
+  }
+
   private getPlaygroundHtml(): string {
   const mcpPort = Number(process.env.MCP_PORT) || 3001;
   return `<!DOCTYPE html><html lang="en"><meta charset="utf-8" />
 <title>MCP Playground</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <style>:root{--bg:#0f1115;--panel:#1b1f27;--border:#2a303a;--accent:#3d82ff;--text:#e6e8ef;--muted:#9aa1af}body{margin:0;font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);padding:32px}h1{margin-top:0;font-size:20px}.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;max-width:880px}label{display:block;font-weight:600;margin:18px 0 6px}textarea,input{width:100%;box-sizing:border-box;background:#11151c;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:10px;font:inherit;resize:vertical}input{height:40px}button{background:var(--accent);color:#fff;border:none;padding:10px 18px;border-radius:6px;font:600 14px system-ui;cursor:pointer;margin-top:14px}button:disabled{opacity:.5;cursor:default}pre{background:#11151c;border:1px solid var(--border);padding:14px;border-radius:8px;overflow:auto;max-height:420px}.row{display:flex;gap:16px;flex-wrap:wrap}.small{flex:1 1 180px}footer{margin-top:32px;font-size:12px;color:var(--muted)}.status{font-size:12px;color:var(--muted);margin-left:10px}</style>
-<div class="card"><h1>MCP Tool Playground</h1><form id="toolForm"><label>Message<textarea name="message" rows="3" placeholder="e.g. Dashboard with KPIs and revenue trend" required>dashboard with kpis</textarea></label><div class="row"><div class="small"><label>User ID<input name="userId" value="default" /></label></div><div class="small"><label>Endpoint (Base URL)<input name="baseUrl" value="http://localhost:${mcpPort}" /></label></div></div><button type="submit" id="runBtn">Call create_portal_ui</button><span class="status" id="status"></span></form><h3>Response</h3><pre id="output">—</pre><h3>View URL</h3><div id="viewUrl" style="font:13px system-ui;"></div></div><footer>POST name=create_portal_ui → /mcp/tools/call</footer>
-  <script>
-  // Minimal playground logic with safer JSON handling
-  const f=document.getElementById('toolForm');
-  const out=document.getElementById('output');
-  const statusEl=document.getElementById('status');
-  const viewUrlEl=document.getElementById('viewUrl');
-  const btn=document.getElementById('runBtn');
-
-  async function callTool(baseUrl,message,userId){
-    const body={name:'create_portal_ui',arguments:{message,userId}};
-    const url=baseUrl.replace(/\/$/,'')+'/mcp/tools/call';
-    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const raw=await res.text();
-    let parsed;try{parsed=raw?JSON.parse(raw):{error:'Empty response', raw:''};}catch(e){parsed={error:'Non-JSON response', raw};}
-    if(!res.ok){return { success:false, status:res.status, ...parsed };}
-    return parsed;
+<div class="card"><h1>MCP Tool Playground</h1><form id="toolForm" method="post" novalidate><label>Message<textarea name="message" rows="3" placeholder="e.g. Dashboard with KPIs and revenue trend" required>dashboard with kpis</textarea></label><div class="row"><div class="small"><label>User ID<input name="userId" value="default" /></label></div><div class="small"><label>Endpoint (Base URL)<input name="baseUrl" value="http://localhost:${mcpPort}" /></label></div></div><button type="submit" id="runBtn">Call create_portal_ui</button><span class="status" id="status"></span></form><h3>Response</h3><pre id="output">—</pre><h3>View URL</h3><div id="viewUrl" style="font:13px system-ui;"></div></div><footer>POST name=create_portal_ui → /mcp/tools/call</footer>
+<script src="/playground.js"></script></html>`;
   }
 
-  f.addEventListener('submit',async e=>{
-    e.preventDefault();
-    out.textContent='';
-    viewUrlEl.textContent='';
-    statusEl.textContent='Calling…';
-    btn.disabled=true;
-    try {
-      const fd=new FormData(f);
-      const baseUrl=fd.get('baseUrl');
-      const message=fd.get('message');
-      const userId=fd.get('userId')||'default';
-      const start=performance.now();
-      const resp=await callTool(baseUrl,message,userId);
-      const ms=Math.round(performance.now()-start);
-      statusEl.textContent='Done in '+ms+' ms';
-      out.textContent=JSON.stringify(resp,null,2);
-      if(resp.viewUrl){
-        const safeUrl=resp.viewUrl.replace(/"/g,'&quot;');
-        viewUrlEl.innerHTML='<a style="color:#3d82ff" target="_blank" rel="noopener" href="'+safeUrl+'">'+safeUrl+'</a>';
-      }
-    } catch(err){
-      statusEl.textContent='Error';
-      out.textContent=String(err);
-    } finally {
-      btn.disabled=false;
-    }
-  });
-  </script></html>`;
+  private getPlaygroundScript(): string {
+    return `// External playground script\n` +
+`(function(){\n`+
+`const f=document.getElementById('toolForm');\n`+
+`const out=document.getElementById('output');\n`+
+`const statusEl=document.getElementById('status');\n`+
+`const viewUrlEl=document.getElementById('viewUrl');\n`+
+`const btn=document.getElementById('runBtn');\n`+
+`async function callTool(baseUrl,message,userId){\n`+
+`  const body={name:'create_portal_ui',arguments:{message,userId}};\n`+
+`  const url=baseUrl.replace(/\\/$/,'')+'/mcp/tools/call';\n`+
+`  const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});\n`+
+`  const raw=await res.text();\n`+
+`  let parsed;try{parsed=raw?JSON.parse(raw):{error:'Empty response', raw:''};}catch(e){parsed={error:'Non-JSON response', raw};}\n`+
+`  if(!res.ok){return { success:false, status:res.status, ...parsed };}\n`+
+`  return parsed;\n`+
+`}\n`+
+`f.addEventListener('submit',async e=>{\n`+
+`  e.preventDefault();\n`+
+`  out.textContent='';\n`+
+`  viewUrlEl.textContent='';\n`+
+`  statusEl.textContent='Calling…';\n`+
+`  btn.disabled=true;\n`+
+`  try {\n`+
+`    const fd=new FormData(f);\n`+
+`    const baseUrl=fd.get('baseUrl');\n`+
+`    const message=fd.get('message');\n`+
+`    const userId=fd.get('userId')||'default';\n`+
+`    const start=performance.now();\n`+
+`    const resp=await callTool(baseUrl,message,userId);\n`+
+`    const ms=Math.round(performance.now()-start);\n`+
+`    statusEl.textContent='Done in '+ms+' ms';\n`+
+`    out.textContent=JSON.stringify(resp,null,2);\n`+
+`    if(resp.viewUrl){\n`+
+`      const safeUrl=resp.viewUrl.replace(/"/g,'&quot;');\n`+
+`      viewUrlEl.innerHTML='<a style=\\"color:#3d82ff\\" target=\\"_blank\\" rel=\\"noopener\\" href=\\"'+safeUrl+'\\">'+safeUrl+'</a>';\n`+
+`    }\n`+
+`  } catch(err){\n`+
+`    statusEl.textContent='Error';\n`+
+`    out.textContent=String(err);\n`+
+`  } finally {\n`+
+`    btn.disabled=false;\n`+
+`  }\n`+
+`});\n`+
+`})();\n`;
   }
 
   private renderComposition(composition: SimpleRenderableComposition): string {
