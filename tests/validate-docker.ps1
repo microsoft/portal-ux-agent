@@ -41,3 +41,12 @@ if($response.viewUrl){
 else {
   Write-Warning "No viewUrl returned"
 }
+
+Write-Host "=== Opening playground in browser ===" -ForegroundColor Cyan
+$playgroundUrl = "http://localhost:$UiPort/playground"
+Write-Host "Launching: $playgroundUrl" -ForegroundColor DarkCyan
+try {
+  Start-Process $playgroundUrl | Out-Null
+} catch {
+  Write-Warning "Failed to open browser automatically. Open manually: $playgroundUrl"
+}
