@@ -4,7 +4,7 @@ import { parse } from 'url';
 import { processUserIntent } from '../../ux-architect-agent/intent-processor.js';
 import { renderUI } from '../../ui-builder-agent/ui-renderer.js';
 import { DEFAULT_USER_ID } from '../../shared/config.js';
-import { subscribeSession, emitSessionEvent } from '../../shared/event-bus.js';
+// SSE removed; no event bus needed
 
 function sendJson(res: ServerResponse, status: number, body: any) {
   res.writeHead(status, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
@@ -86,19 +86,6 @@ export function startHttpMcpServer(port = Number(process.env.MCP_PORT) || 3001) 
           const userId = (args.userId && String(args.userId).trim()) || DEFAULT_USER_ID;
           const intent = await processUserIntent(args.message);
           const composition = await renderUI(intent, userId);
-          // Emit events for this session (after we know the sessionId)
-          emitSessionEvent(composition.sessionId, 'intent:completed', {
-            userGoal: intent.userGoal,
-            template: intent.suggestedTemplate,
-            components: intent.components,
-          });
-          emitSessionEvent(composition.sessionId, 'composition:created', {
-            template: composition.template,
-            components: composition.components?.length || 0,
-          });
-          emitSessionEvent(composition.sessionId, 'render:ready', {
-            viewUrl: `http://localhost:${uiPort}/ui/${encodeURIComponent(userId)}`,
-          });
           return sendJson(res, 200, {
             success: true,
             userId,
@@ -111,50 +98,7 @@ export function startHttpMcpServer(port = Number(process.env.MCP_PORT) || 3001) 
         }
       }
 
-      // SSE stream of events for a session
-      if (req.method === 'GET' && pathname?.startsWith('/mcp/stream/')) {
-        const sessionId = pathname.split('/mcp/stream/')[1];
-        if (!sessionId) {
-          res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
-          res.end(JSON.stringify({ error: 'Missing sessionId' }));
-          return;
-        }
-        // Headers for SSE
-        res.writeHead(200, {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          Connection: 'keep-alive',
-          'Access-Control-Allow-Origin': '*',
-        });
-        // Initial comment to open stream
-        res.write(`: connected to session ${sessionId}\n\n`);
-        // Keepalive ping
-        const ping = setInterval(() => {
-          try {
-            res.write(`event: ping\n`);
-            res.write(`data: {"ts":${Date.now()}}\n\n`);
-          } catch {
-            // ignore
-          }
-        }, 15000);
-
-        // Subscribe to session events
-        const unsubscribe = subscribeSession(sessionId, (evt) => {
-          try {
-            res.write(`event: ${evt.type}\n`);
-            res.write(`data: ${JSON.stringify(evt)}\n\n`);
-          } catch {
-            // client likely disconnected
-          }
-        });
-
-        // Cleanup on close
-        req.on('close', () => {
-          clearInterval(ping);
-          unsubscribe();
-        });
-        return; // keep connection open
-      }
+      // SSE endpoint removed; use WebSocket MCP for streaming
 
       return sendJson(res, 404, { error: 'Not Found' });
     } catch (e: any) {

@@ -25,6 +25,15 @@ npm run dev:combined
 ```
 UI on http://localhost:3000 (default user composition at /ui/default), MCP HTTP on http://localhost:3001.
 
+WebSocket MCP (standard MCP SDK, full-duplex streaming):
+```bash
+npm run dev:mcp:ws
+# or run combined with WS transport
+set USE_MCP_WS=1 && npm run dev:combined   # PowerShell
+# export USE_MCP_WS=1 && npm run dev:combined  # macOS/Linux
+```
+MCP WS endpoint: ws://localhost:3001
+
 ## Docker
 
 Build and run with Docker (exposes ports 3000 and 3001):
