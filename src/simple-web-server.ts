@@ -47,6 +47,10 @@ class SimpleWebServer {
         this.handlePlayground(res);
       } else if (pathname === '/playground.js') {
         this.handlePlaygroundScript(res);
+      } else if (pathname === '/playground-ws') {
+        this.handlePlaygroundWs(res);
+      } else if (pathname === '/playground-ws.js') {
+        this.handlePlaygroundWsScript(res);
       } else if (pathname.startsWith('/ui/')) {
         const userId = pathname.split('/ui/')[1];
         this.handleUIRequest(userId, res);
@@ -113,6 +117,28 @@ class SimpleWebServer {
     }
   }
 
+  private handlePlaygroundWs(res: any) {
+    try {
+      const html = this.getPlaygroundWsHtml();
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(html);
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('Playground WS failed');
+    }
+  }
+
+  private handlePlaygroundWsScript(res: any) {
+    try {
+      const js = this.getPlaygroundWsScript();
+      res.writeHead(200, { 'Content-Type': 'application/javascript' });
+      res.end(js);
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('Playground WS script failed');
+    }
+  }
+
   private getPlaygroundHtml(): string {
   const mcpPort = Number(process.env.MCP_PORT) || 3001;
   return `<!DOCTYPE html><html lang="en"><meta charset="utf-8" />
@@ -121,6 +147,46 @@ class SimpleWebServer {
 <style>:root{--bg:#0f1115;--panel:#1b1f27;--border:#2a303a;--accent:#3d82ff;--text:#e6e8ef;--muted:#9aa1af}body{margin:0;font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);padding:32px}h1{margin-top:0;font-size:20px}.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;max-width:880px}label{display:block;font-weight:600;margin:18px 0 6px}textarea,input{width:100%;box-sizing:border-box;background:#11151c;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:10px;font:inherit;resize:vertical}input{height:40px}button{background:var(--accent);color:#fff;border:none;padding:10px 18px;border-radius:6px;font:600 14px system-ui;cursor:pointer;margin-top:14px}button:disabled{opacity:.5;cursor:default}pre{background:#11151c;border:1px solid var(--border);padding:14px;border-radius:8px;overflow:auto;max-height:420px}.row{display:flex;gap:16px;flex-wrap:wrap}.small{flex:1 1 180px}footer{margin-top:32px;font-size:12px;color:var(--muted)}.status{font-size:12px;color:var(--muted);margin-left:10px}</style>
 <div class="card"><h1>MCP Tool Playground</h1><form id="toolForm" method="post" novalidate><label>Message<textarea name="message" rows="3" placeholder="e.g. Dashboard with KPIs and revenue trend" required>dashboard with kpis</textarea></label><div class="row"><div class="small"><label>User ID<input name="userId" value="default" /></label></div><div class="small"><label>Endpoint (Base URL)<input name="baseUrl" value="http://localhost:${mcpPort}" /></label></div></div><button type="submit" id="runBtn">Call create_portal_ui</button><span class="status" id="status"></span></form><h3>Response</h3><pre id="output">—</pre><h3>View URL</h3><div id="viewUrl" style="font:13px system-ui;"></div></div><footer>POST name=create_portal_ui → /mcp/tools/call</footer>
 <script src="/playground.js"></script></html>`;
+  }
+
+  private getPlaygroundWsHtml(): string {
+    const mcpPort = Number(process.env.MCP_PORT) || 3001;
+    return `<!DOCTYPE html><html lang="en"><meta charset="utf-8" />
+<title>MCP WS Playground</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>:root{--bg:#0f1115;--panel:#1b1f27;--border:#2a303a;--accent:#3d82ff;--text:#e6e8ef;--muted:#9aa1af}body{margin:0;font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);padding:32px}h1{margin-top:0;font-size:20px}.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;max-width:880px}label{display:block;font-weight:600;margin:18px 0 6px}textarea,input{width:100%;box-sizing:border-box;background:#11151c;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:10px;font:inherit;resize:vertical}input{height:40px}button{background:var(--accent);color:#fff;border:none;padding:10px 18px;border-radius:6px;font:600 14px system-ui;cursor:pointer;margin-top:14px}button:disabled{opacity:.5;cursor:default}pre{background:#11151c;border:1px solid var(--border);padding:14px;border-radius:8px;overflow:auto;max-height:420px}.row{display:flex;gap:16px;flex-wrap:wrap}.small{flex:1 1 180px}footer{margin-top:32px;font-size:12px;color:var(--muted)}.status{font-size:12px;color:var(--muted);margin-left:10px}</style>
+<div class="card"><h1>MCP Tool Playground (WebSocket)</h1><form id="toolForm" method="post" novalidate><label>Message<textarea name="message" rows="3" placeholder="e.g. Dashboard with KPIs and revenue trend" required>dashboard with kpis</textarea></label><div class="row"><div class="small"><label>User ID<input name="userId" value="default" /></label></div><div class="small"><label>WS Endpoint<input name="wsBaseUrl" value="ws://localhost:${mcpPort}" /></label></div></div><button type="submit" id="runBtn">Call create_portal_ui (WS)</button><span class="status" id="status"></span></form><h3>Response</h3><pre id="output">-</pre><h3>View URL</h3><div id="viewUrl" style="font:13px system-ui;"></div></div><footer>WebSocket subprotocol: mcp</footer>
+<script src="/playground-ws.js"></script></html>`;
+  }
+
+  private getPlaygroundWsScript(): string {
+    return `// WS Playground script\n` +
+`(function(){\n`+
+`const f=document.getElementById('toolForm');\n`+
+`const out=document.getElementById('output');\n`+
+`const statusEl=document.getElementById('status');\n`+
+`const viewUrlEl=document.getElementById('viewUrl');\n`+
+`const btn=document.getElementById('runBtn');\n`+
+`f.addEventListener('submit',async e=>{\n`+
+`  e.preventDefault(); out.textContent=''; viewUrlEl.textContent=''; statusEl.textContent='Connecting...'; btn.disabled=true;\n`+
+`  try{\n`+
+`    const fd=new FormData(f);\n`+
+`    const wsBaseUrl=fd.get('wsBaseUrl');\n`+
+`    const message=fd.get('message');\n`+
+`    const userId=fd.get('userId')||'default';\n`+
+`    const resp=await (async function callToolWs(){\n`+
+`      return new Promise((resolve,reject)=>{\n`+
+`        let nextId=1; const pending=new Map(); const ws=new WebSocket(wsBaseUrl,'mcp');\n`+
+`        function send(method,params){ const id=nextId++; const msg={jsonrpc:'2.0',id,method,params}; ws.send(JSON.stringify(msg)); return new Promise((res,rej)=>{ const t=setTimeout(()=>{pending.delete(id);rej(new Error('Timeout '+method));},15000); pending.set(id,{res:(v)=>{clearTimeout(t);res(v)},rej:(e)=>{clearTimeout(t);rej(e)}}); }); }\n`+
+`        ws.onopen=async()=>{ try{ await send('initialize',{protocolVersion:'2025-06-18',clientInfo:{name:'playground',version:'1.0.0'},capabilities:{tools:{}}}); ws.send(JSON.stringify({jsonrpc:'2.0',method:'initialized'})); const result=await send('tools/call',{name:'create_portal_ui',arguments:{message,userId}}); try{ const text=(Array.isArray(result?.content)&&result.content[0]?.text)||''; const parsed=text?JSON.parse(text):result; resolve(parsed);}catch(e){ resolve({success:false,error:'Bad WS response', raw:result}); } finally { ws.close(); } }catch(e){ reject(e); try{ws.close();}catch{} } };\n`+
+`        ws.onmessage=(ev)=>{ try{ const msg=JSON.parse(ev.data); if(typeof msg.id!=='undefined'){ const rec=pending.get(msg.id); pending.delete(msg.id); if(rec){ if('result' in msg) rec.res(msg.result); else rec.rej(new Error(msg.error?.message||'WS error')); } } }catch{} };\n`+
+`        ws.onerror=()=>{ reject(new Error('WebSocket error')); try{ws.close();}catch{} }; ws.onclose=()=>{};\n`+
+`      });\n`+
+`    })();\n`+
+`    out.textContent=JSON.stringify(resp,null,2); statusEl.textContent='Done'; if(resp.viewUrl){ const safeUrl=resp.viewUrl.replace(/\"/g,'&quot;'); viewUrlEl.innerHTML='<a style=\\"color:#3d82ff\\" target=\\"_blank\\" rel=\\"noopener\\" href=\\"'+safeUrl+'\\">'+safeUrl+'</a>'; }\n`+
+`  }catch(err){ statusEl.textContent='Error'; out.textContent=String(err); } finally { btn.disabled=false; }\n`+
+`});\n`+
+`})();\n`;
   }
 
   private getPlaygroundScript(): string {

@@ -5,7 +5,16 @@ import { WsServerTransport } from './ws-transport.js';
 import { toolsDescriptor, handleCreatePortalUi } from './core.js';
 
 export function startWsMcpServer(port = Number(process.env.MCP_PORT) || 3001) {
-  const wss = new WebSocketServer({ port });
+  const wss = new WebSocketServer({
+    port,
+    handleProtocols: (protocols) => {
+      // Prefer the standard MCP subprotocol when offered
+      if (protocols.has('mcp')) return 'mcp';
+      // Otherwise accept the first offered protocol or none
+      const first = protocols.values().next().value;
+      return first || false;
+    },
+  });
 
   wss.on('connection', async (ws: WebSocket) => {
     const server = new Server({ name: 'portal-ux-agent', version: '1.0.0' }, { capabilities: { tools: {} } });
