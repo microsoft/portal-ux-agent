@@ -19,7 +19,10 @@ class SimpleWebServer {
 
   constructor(port = Number(process.env.UI_PORT) || 3000) {
     this.port = port;
-    this.addSampleCompositions();
+    // Attempt seeding but do not crash container if LLM not configured
+    this.addSampleCompositions().catch(err => {
+      console.warn('[seed] Skipping sample composition:', err?.message || err);
+    });
   }
 
   private async addSampleCompositions() {
