@@ -1,3 +1,5 @@
+import { appendFileSync, mkdirSync } from 'fs';
+import { dirname, resolve } from 'path';
 import { DefaultAzureCredential } from '@azure/identity';
 import type { AccessToken } from '@azure/core-auth';
 import {
@@ -25,6 +27,24 @@ export const SUPPORTED_COMPONENTS = [
 ] as const;
 
 type ChatMessage = { role: 'system' | 'user'; content: string };
+
+const PROMPT_LOG_PATH = process.env.INTENT_PROMPT_LOG || 'logs/intent-prompts.log';
+
+function logPromptMessages(messages: ChatMessage[]): void {
+  try {
+    const absolutePath = resolve(process.cwd(), PROMPT_LOG_PATH);
+    const directory = dirname(absolutePath);
+    if (directory) {
+      mkdirSync(directory, { recursive: true });
+    }
+    const payload = JSON.stringify({ timestamp: new Date().toISOString(), messages });
+    appendFileSync(absolutePath, `${payload}\n`);
+  } catch (error) {
+    if (INTENT_LOG_PROMPT) {
+      console.warn('[intent.llm] failed to write prompt log', error);
+    }
+  }
+}
 
 function buildPrompt(message: string): ChatMessage[] {
   const system = `You are an intent-to-UI planner for a Portal UI generator.
@@ -81,11 +101,15 @@ Rules:
 - Pick the best template; set dataStructure.
 - Fill "components" with compatible hyphen-case IDs for backward compatibility.
 - If possible, provide "extractedData.componentsDetailed" with fully specified elements ready to render.
-- No explanations or comments — JSON object only.`;\r\n\r\n  const user = `User message: ${message}`;
-  return [
+- No explanations or comments — JSON object only.`;
+
+  const user = `User message: ${message}`;
+  const messages: ChatMessage[] = [
     { role: 'system', content: system },
     { role: 'user', content: user }
   ];
+  logPromptMessages(messages);
+  return messages;
 }
 
 let aadCredential: DefaultAzureCredential | undefined;

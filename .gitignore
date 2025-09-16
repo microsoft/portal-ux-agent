@@ -108,3 +108,4 @@ combined.*.log
 
 # Azure deployment files
 .azure/
+logs/
