@@ -11,6 +11,7 @@ export const AZURE_OPENAI_USE_AAD = (process.env.AZURE_OPENAI_USE_AAD || '0') ==
 // Intent generation runtime flags
 export const INTENT_TIMEOUT_MS = Number(process.env.INTENT_TIMEOUT_MS || 12000);
 export const INTENT_LOG_PROMPT = (process.env.INTENT_LOG_PROMPT || '0') === '1';
+export const INTENT_TEMPERATURE = Number(process.env.INTENT_TEMPERATURE ?? '1');
 
 export function isAzureOpenAIConfigured(): boolean {
   return Boolean(
