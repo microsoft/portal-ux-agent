@@ -2,29 +2,14 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { UIComposition } from '../../ui-builder-agent/ui-renderer.js';
 import { ComponentRegistry } from '../../ui-component-library/registry.js';
+import { groupBySlot, specToReactElement } from '../../ui-component-library/render-from-json.js';
+import type { UiComponentSpec } from '../../ui-component-library/specs.js';
 
 export async function renderReactUI(composition: UIComposition): Promise<string> {
   // Create the React component tree based on composition
-  const componentElements = composition.components.map((component: any) => {
-    const ComponentClass = ComponentRegistry.get(component.type);
-    if (!ComponentClass) {
-      return React.createElement('div', { key: component.id }, `Unknown component: ${component.type}`);
-    }
-    
-    return React.createElement(ComponentClass, {
-      key: component.id,
-      ...component.props
-    });
-  });
-
-  // Group components by slot
-  const slotComponents: Record<string, React.ReactElement[]> = {};
-  composition.components.forEach((component: any, index: number) => {
-    if (!slotComponents[component.slot]) {
-      slotComponents[component.slot] = [];
-    }
-    slotComponents[component.slot].push(componentElements[index]);
-  });
+  const specs = (composition.components as unknown as UiComponentSpec[]);
+  const componentElements = specs.map(specToReactElement);
+  const slotComponents = groupBySlot(specs);
 
   // Render the template with components in slots
   const templateHTML = composition.templateData.html;

@@ -27,23 +27,61 @@ export const SUPPORTED_COMPONENTS = [
 type ChatMessage = { role: 'system' | 'user'; content: string };
 
 function buildPrompt(message: string): ChatMessage[] {
-  const system = `You are an intent extraction service for a Portal UI generator.
-Return ONLY compact JSON matching this TypeScript type, no extra text:
+  const system = `You are an intent-to-UI planner for a Portal UI generator.
+Return ONLY one compact JSON object (no prose, no markdown) with this shape:
 {
   "userGoal": string,
   "dataStructure": "list" | "grid" | "kanban" | "chart" | "form" | "unknown",
-  "suggestedTemplate": string, // one of: ${SUPPORTED_TEMPLATES.join(', ')}
-  "components": string[],       // subset of: ${SUPPORTED_COMPONENTS.join(', ')}
-  "extractedData"?: any
+  "suggestedTemplate": string,        // one of: ${SUPPORTED_TEMPLATES.join(', ')}
+  "components": string[],             // hyphen-case IDs, subset of: ${SUPPORTED_COMPONENTS.join(', ')}
+  "extractedData": {
+    // optional structured information
+    "componentsDetailed"?: [
+      {
+        "type": "KpiCard" | "Chart" | "Table" | "Card" | "NavItem" | "KanbanColumn" | "KanbanCard",
+        "library": "shadcn",
+        "slot": string,               // valid slot for template (see Slots below)
+        "props": object               // must match Component Props below
+      }
+    ]
+  }
 }
 
-Guidance:
-- dashboard / metrics / KPI → template: dashboard-cards-grid; components: ["kpi-card","chart","table"].
-- kanban / board → template: board-kanban; components: ["kanban-column","kanban-card"].
-- portal / navigation → template: portal-leftnav; components: ["nav-item","table"].
-Prefer concise decisions; do not include explanations.`;
+Slots by template:
+- dashboard-cards-grid
+  - header: accepts [title, toolbar]
+  - kpiRow: accepts [kpi-card, metric]
+  - cardsGrid: accepts [card, chart, table]
+- portal-leftnav
+  - nav: accepts [nav-item]
+  - header: accepts [title, user-menu]
+  - content: accepts [page, form, table, chart]
+- board-kanban
+  - toolbar: accepts [button, filter]
+  - columns: accepts [kanban-column]
+  - cards: accepts [kanban-card]
 
-  const user = `User message: ${message}`;
+Component Props (must conform):
+- kpi-card -> type: KpiCard
+  props: { title: string, value: string|number, trend: "up"|"down"|"neutral", icon?: string }
+- chart -> type: Chart
+  props: { type: "line"|"bar"|"pie", title?: string, data: any[] }
+- table -> type: Table
+  props: { columns: (string|object)[], data: any[], sortable?: boolean }
+- card -> type: Card
+  props: { title?: string, content?: string, actions?: any[] }
+- nav-item -> type: NavItem
+  props: { label: string, href?: string, icon?: string }
+- kanban-column -> type: KanbanColumn
+  props: { title: string, limit?: number|null, cards: any[] }
+- kanban-card -> type: KanbanCard
+  props: { title: string, description?: string, assignee?: string, priority?: "low"|"medium"|"high" }
+
+Rules:
+- Pick the best template; set dataStructure.
+- Fill "components" with compatible hyphen-case IDs for backward compatibility.
+- If possible, provide "extractedData.componentsDetailed" with fully specified elements ready to render.
+- No explanations or comments — JSON object only.`;\r\n\r\n  const user = `User message: ${message}`;
   return [
     { role: 'system', content: system },
     { role: 'user', content: user }
@@ -143,3 +181,6 @@ export async function generateIntentLLM(message: string): Promise<unknown> {
     clearTimeout(timeout);
   }
 }
+
+
+
