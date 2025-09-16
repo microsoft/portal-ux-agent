@@ -30,6 +30,60 @@ Write-Host "=== Killing all portal-ux-agent containers ===" -ForegroundColor Cya
 docker ps -aq --filter "ancestor=portal-ux-agent" | ForEach-Object { docker rm -f $_ }
 docker rm -f portal-ux-agent-run 2>$null
 
+# Port cleanup: ensure target UI and MCP ports are free before starting container
+function Stop-ProcessOnPort {
+  param(
+    [Parameter(Mandatory)][int]$Port
+  )
+  $killed = @()
+  try {
+    $conns = Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction Stop
+    $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique
+    foreach ($pid in $pids) {
+      if ($pid -and $pid -ne $PID) {
+        try {
+          $proc = Get-Process -Id $pid -ErrorAction Stop
+          Write-Host "Stopping process $($proc.ProcessName) (PID $pid) on port $Port" -ForegroundColor Yellow
+          Stop-Process -Id $pid -Force
+          $killed += $pid
+        } catch {
+          Write-Warning "Failed to stop PID $pid on port $Port: $_"
+        }
+      }
+    }
+  } catch {
+    # Fallback to netstat parsing if Get-NetTCPConnection not available or access denied
+    try {
+      $netstat = netstat -ano | Select-String ":$Port\s+.*LISTENING" | ForEach-Object { $_.ToString() }
+      foreach ($line in $netstat) {
+        $parts = $line -split "\s+" | Where-Object { $_ -ne '' }
+        if ($parts.Length -ge 5) {
+          $pid = $parts[-1]
+          if ($pid -match '^[0-9]+$' -and [int]$pid -ne $PID) {
+            try {
+              $proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+              $pname = if ($proc) { $proc.ProcessName } else { '<unknown>' }
+              Write-Host "Stopping PID $pid ($pname) on port $Port (fallback)" -ForegroundColor Yellow
+              Stop-Process -Id $pid -Force
+              $killed += $pid
+            } catch {
+              Write-Warning "Fallback failed to stop PID $pid on port $Port: $_"
+            }
+          }
+        }
+      }
+    } catch {
+      Write-Warning "Could not inspect port $Port: $_"
+    }
+  }
+  if (-not $killed.Count) {
+    Write-Host "Port $Port free" -ForegroundColor DarkGray
+  }
+}
+
+Write-Host "=== Ensuring ports $UiPort and $McpPort are free ===" -ForegroundColor Cyan
+foreach ($p in @($UiPort, $McpPort)) { Stop-ProcessOnPort -Port $p }
+
 Write-Host "=== Building image ===" -ForegroundColor Cyan
 docker build -t portal-ux-agent .
 
