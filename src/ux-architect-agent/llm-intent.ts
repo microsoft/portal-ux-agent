@@ -115,6 +115,19 @@ Rules:
 let aadCredential: DefaultAzureCredential | undefined;
 let cachedAccessToken: AccessToken | undefined;
 
+function redactHeaders(h: Record<string,string>): Record<string,string> {
+  const sensitive = ['authorization','api-key'];
+  const out: Record<string,string> = {};
+  for (const [k,v] of Object.entries(h)) {
+    if (sensitive.includes(k.toLowerCase())) {
+      out[k] = '***redacted***';
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
 async function buildAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
@@ -166,23 +179,49 @@ export async function generateIntentLLM(message: string, options?: { force?: boo
 
   const ctrl = new AbortController();
   const timeout = setTimeout(() => ctrl.abort(), INTENT_TIMEOUT_MS);
+  const correlationId = Math.random().toString(36).slice(2,10);
 
   try {
+    const headers = await buildAuthHeaders(); // Will throw if keys / auth missing; that is desired point of failure
+
     if (INTENT_LOG_PROMPT) {
-      // eslint-disable-next-line no-console
-      console.log('[intent.llm] prompt', JSON.stringify(body.messages));
+      try {
+        console.log('[intent.llm] request', JSON.stringify({
+          correlationId,
+          url,
+          method: 'POST',
+          headers: redactHeaders(headers),
+          body,
+          messagePreview: String(message).slice(0,200)
+        }, null, 2));
+      } catch (e) {
+        console.warn('[intent.llm] failed to log request', (e as Error)?.message || e);
+      }
     }
 
-  const headers = await buildAuthHeaders(); // Will throw if keys / auth missing; that is desired point of failure
+    const started = Date.now();
     const res = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
       signal: ctrl.signal
     });
+    const elapsedMs = Date.now() - started;
+
+    if (INTENT_LOG_PROMPT) {
+      console.log('[intent.llm] response.meta', JSON.stringify({
+        correlationId,
+        status: res.status,
+        ok: res.ok,
+        elapsedMs
+      }, null, 2));
+    }
 
     if (!res.ok) {
       const text = await res.text().catch(() => '');
+      if (INTENT_LOG_PROMPT) {
+        console.warn('[intent.llm] response.errorBody (truncated)', text.slice(0, 2000));
+      }
       throw new Error(`Azure OpenAI error ${res.status}: ${text}`);
     }
 
@@ -193,11 +232,17 @@ export async function generateIntentLLM(message: string, options?: { force?: boo
     }
     const parsed = JSON.parse(contentText);
     if (INTENT_LOG_PROMPT) {
-      // eslint-disable-next-line no-console
-      console.log('[intent.llm] parsed', parsed);
+      console.log('[intent.llm] parsed', { correlationId, parsed });
     }
     return parsed;
   } catch (err: any) {
+    if (INTENT_LOG_PROMPT) {
+      console.error('[intent.llm] failure', {
+        correlationId,
+        error: err?.message || String(err),
+        aborted: err?.name === 'AbortError'
+      });
+    }
     if (err?.name === 'AbortError') {
       throw new Error('Azure OpenAI request timed out');
     }
