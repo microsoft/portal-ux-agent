@@ -140,22 +140,54 @@ class SimpleWebServer {
   }
 
   private getPlaygroundHtml(): string {
-  const mcpPort = Number(process.env.MCP_PORT) || 3001;
-  return `<!DOCTYPE html><html lang="en"><meta charset="utf-8" />
+    const mcpPort = Number(process.env.MCP_PORT) || 3001;
+    return `<!DOCTYPE html><html lang="en"><meta charset="utf-8" />
 <title>MCP Playground</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <style>:root{--bg:#0f1115;--panel:#1b1f27;--border:#2a303a;--accent:#3d82ff;--text:#e6e8ef;--muted:#9aa1af}body{margin:0;font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);padding:32px}h1{margin-top:0;font-size:20px}.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;max-width:880px}label{display:block;font-weight:600;margin:18px 0 6px}textarea,input{width:100%;box-sizing:border-box;background:#11151c;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:10px;font:inherit;resize:vertical}input{height:40px}button{background:var(--accent);color:#fff;border:none;padding:10px 18px;border-radius:6px;font:600 14px system-ui;cursor:pointer;margin-top:14px}button:disabled{opacity:.5;cursor:default}pre{background:#11151c;border:1px solid var(--border);padding:14px;border-radius:8px;overflow:auto;max-height:420px}.row{display:flex;gap:16px;flex-wrap:wrap}.small{flex:1 1 180px}footer{margin-top:32px;font-size:12px;color:var(--muted)}.status{font-size:12px;color:var(--muted);margin-left:10px}</style>
-<div class="card"><h1>MCP Tool Playground</h1><form id="toolForm" method="post" novalidate><label>Message<textarea name="message" rows="3" placeholder="e.g. Dashboard with KPIs and revenue trend" required>dashboard with kpis</textarea></label><div class="row"><div class="small"><label>User ID<input name="userId" value="default" /></label></div><div class="small"><label>Endpoint (Base URL)<input name="baseUrl" value="http://localhost:${mcpPort}" /></label></div></div><button type="submit" id="runBtn">Call create_portal_ui</button><span class="status" id="status"></span></form><h3>Response</h3><pre id="output">—</pre><h3>View URL</h3><div id="viewUrl" style="font:13px system-ui;"></div></div><footer>POST name=create_portal_ui → /mcp/tools/call</footer>
-<script src="/playground.js"></script></html>`;
-  }
+<div class="card"><h1>MCP Tool Playground</h1><form id="toolForm" method="post" novalidate><label>Message<textarea name="message" rows="18" placeholder="e.g. Dashboard with KPIs and revenue trend" required>Team's velocity in last 6 sprints, measured by stories burned.
+[
+  { "sprint": "Sprint 7", "burned": 42 },
+  { "sprint": "Sprint 8", "burned": 35 },
+  { "sprint": "Sprint 9", "burned": 48 },
+  { "sprint": "Sprint 10", "burned": 39 },
+  { "sprint": "Sprint 11", "burned": 44 },
+  { "sprint": "Sprint 12", "burned": 47 }
+]
 
-  private getPlaygroundWsHtml(): string {
+Team availability in next sprint.
+[
+  { "member": "Alice",   "capacity": 10, "assigned": 7, "availability": 3, "notes": "Can take 1 small task" },
+  { "member": "Bob",     "capacity": 10, "assigned": 10, "availability": 0, "notes": "Fully loaded" },
+  { "member": "Charlie", "capacity": 10, "assigned": 5, "availability": 5, "notes": "Available for big task" },
+  { "member": "Diana",   "capacity": 10, "assigned": 8, "availability": 2, "notes": "Lightly loaded" },
+  { "member": "Ethan",   "capacity": 10, "assigned": 6, "availability": 4, "notes": "Medium availability" }
+]</textarea></label><div class="row"><div class="small"><label>User ID<input name="userId" value="default" /></label></div><div class="small"><label>Endpoint (Base URL)<input name="baseUrl" value="http://localhost:${mcpPort}" /></label></div></div><button type="submit" id="runBtn">Call create_portal_ui</button><span class="status" id="status"></span></form><h3>Response</h3><pre id="output">—</pre><h3>View URL</h3><div id="viewUrl" style="font:13px system-ui;"></div></div><footer>POST name=create_portal_ui → /mcp/tools/call</footer>
+<script src="/playground.js"></script></html>`;
+  }  private getPlaygroundWsHtml(): string {
     const mcpPort = Number(process.env.MCP_PORT) || 3001;
     return `<!DOCTYPE html><html lang="en"><meta charset="utf-8" />
 <title>MCP WS Playground</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <style>:root{--bg:#0f1115;--panel:#1b1f27;--border:#2a303a;--accent:#3d82ff;--text:#e6e8ef;--muted:#9aa1af}body{margin:0;font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);padding:32px}h1{margin-top:0;font-size:20px}.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;max-width:880px}label{display:block;font-weight:600;margin:18px 0 6px}textarea,input{width:100%;box-sizing:border-box;background:#11151c;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:10px;font:inherit;resize:vertical}input{height:40px}button{background:var(--accent);color:#fff;border:none;padding:10px 18px;border-radius:6px;font:600 14px system-ui;cursor:pointer;margin-top:14px}button:disabled{opacity:.5;cursor:default}pre{background:#11151c;border:1px solid var(--border);padding:14px;border-radius:8px;overflow:auto;max-height:420px}.row{display:flex;gap:16px;flex-wrap:wrap}.small{flex:1 1 180px}footer{margin-top:32px;font-size:12px;color:var(--muted)}.status{font-size:12px;color:var(--muted);margin-left:10px}</style>
-<div class="card"><h1>MCP Tool Playground (WebSocket)</h1><form id="toolForm" method="post" novalidate><label>Message<textarea name="message" rows="3" placeholder="e.g. Dashboard with KPIs and revenue trend" required>dashboard with kpis</textarea></label><div class="row"><div class="small"><label>User ID<input name="userId" value="default" /></label></div><div class="small"><label>WS Endpoint<input name="wsBaseUrl" value="ws://localhost:${mcpPort}" /></label></div></div><button type="submit" id="runBtn">Call create_portal_ui (WS)</button><span class="status" id="status"></span></form><h3>Response</h3><pre id="output">-</pre><h3>View URL</h3><div id="viewUrl" style="font:13px system-ui;"></div></div><footer>WebSocket subprotocol: mcp</footer>
+<div class="card"><h1>MCP Tool Playground (WebSocket)</h1><form id="toolForm" method="post" novalidate><label>Message<textarea name="message" rows="18" placeholder="e.g. Dashboard with KPIs and revenue trend" required>Team's velocity in last 6 sprints, measured by stories burned.
+[
+  { "sprint": "Sprint 7", "burned": 42 },
+  { "sprint": "Sprint 8", "burned": 35 },
+  { "sprint": "Sprint 9", "burned": 48 },
+  { "sprint": "Sprint 10", "burned": 39 },
+  { "sprint": "Sprint 11", "burned": 44 },
+  { "sprint": "Sprint 12", "burned": 47 }
+]
+
+Team availability in next sprint.
+[
+  { "member": "Alice",   "capacity": 10, "assigned": 7, "availability": 3, "notes": "Can take 1 small task" },
+  { "member": "Bob",     "capacity": 10, "assigned": 10, "availability": 0, "notes": "Fully loaded" },
+  { "member": "Charlie", "capacity": 10, "assigned": 5, "availability": 5, "notes": "Available for big task" },
+  { "member": "Diana",   "capacity": 10, "assigned": 8, "availability": 2, "notes": "Lightly loaded" },
+  { "member": "Ethan",   "capacity": 10, "assigned": 6, "availability": 4, "notes": "Medium availability" }
+]</textarea></label><div class="row"><div class="small"><label>User ID<input name="userId" value="default" /></label></div><div class="small"><label>WS Endpoint<input name="wsBaseUrl" value="ws://localhost:${mcpPort}" /></label></div></div><button type="submit" id="runBtn">Call create_portal_ui (WS)</button><span class="status" id="status"></span></form><h3>Response</h3><pre id="output">-</pre><h3>View URL</h3><div id="viewUrl" style="font:13px system-ui;"></div></div><footer>WebSocket subprotocol: mcp</footer>
 <script src="/playground-ws.js"></script></html>`;
   }
 

@@ -2,7 +2,26 @@
 param(
   [int]$UiPort = 3000,
   [int]$McpPort = 3001,
-  [string]$Message = "dashboard demo",
+  [string]$Message = @"
+Team's velocity in last 6 sprints, measured by stories burned.
+[
+  { "sprint": "Sprint 7", "burned": 42 },
+  { "sprint": "Sprint 8", "burned": 35 },
+  { "sprint": "Sprint 9", "burned": 48 },
+  { "sprint": "Sprint 10", "burned": 39 },
+  { "sprint": "Sprint 11", "burned": 44 },
+  { "sprint": "Sprint 12", "burned": 47 }
+]
+
+Team availability in next sprint.
+[
+  { "member": "Alice",   "capacity": 10, "assigned": 7, "availability": 3, "notes": "Can take 1 small task" },
+  { "member": "Bob",     "capacity": 10, "assigned": 10, "availability": 0, "notes": "Fully loaded" },
+  { "member": "Charlie", "capacity": 10, "assigned": 5, "availability": 5, "notes": "Available for big task" },
+  { "member": "Diana",   "capacity": 10, "assigned": 8, "availability": 2, "notes": "Lightly loaded" },
+  { "member": "Ethan",   "capacity": 10, "assigned": 6, "availability": 4, "notes": "Medium availability" }
+]
+"@,
   [string]$UserId = "",
   [switch]$UseWs
 )
