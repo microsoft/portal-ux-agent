@@ -30,6 +30,18 @@ Write-Host "=== Killing all portal-ux-agent containers ===" -ForegroundColor Cya
 docker ps -aq --filter "ancestor=portal-ux-agent" | ForEach-Object { docker rm -f $_ }
 docker rm -f portal-ux-agent-run 2>$null
 
+# Auto-load .env if present (without exporting secrets to logs)
+$envFile = Join-Path $PSScriptRoot '..' '.env'
+if (Test-Path $envFile) {
+  Write-Host "=== Loading .env ===" -ForegroundColor Cyan
+  Get-Content $envFile | Where-Object { $_ -and $_ -notmatch '^\s*#' } | ForEach-Object {
+    if ($_ -match '^(?<k>[^=]+)=(?<v>.*)$') {
+      $k = $Matches.k.Trim(); $v = $Matches.v
+      if ($k) { Set-Item -Path env:$k -Value $v }
+    }
+  }
+}
+
 # Port cleanup: ensure target UI and MCP ports are free before starting container
 function Stop-ProcessOnPort {
   param(
@@ -91,8 +103,20 @@ Write-Host "=== Running container ===" -ForegroundColor Cyan
 # If user did not explicitly pass -UseWs, default to true (WebSocket mode)
 $effectiveUseWs = if ($PSBoundParameters.ContainsKey('UseWs')) { $UseWs } else { $true }
 $wsFlag = if ($effectiveUseWs) { '1' } else { '0' }
+Write-Host "=== Preparing docker run environment variables ===" -ForegroundColor Cyan
+$forwardVars = @(
+  'AZURE_OPENAI_ENDPOINT','AZURE_OPENAI_API_KEY','AZURE_OPENAI_DEPLOYMENT','AZURE_OPENAI_API_VERSION',
+  'AZURE_OPENAI_USE_AAD','AZURE_OPENAI_SCOPE','INTENT_LOG_PROMPT','SEED_SAMPLE'
+)
+$envArgs = @()
+foreach ($name in $forwardVars) {
+  $val = (Get-Item -Path Env:$name -ErrorAction SilentlyContinue).Value
+  if ($val) { $envArgs += @('-e', "$name=$val") }
+}
+
 docker run -d --name portal-ux-agent-run `
   -e UI_PORT=$UiPort -e MCP_PORT=$McpPort -e USE_MCP_WS=$wsFlag `
+  $envArgs `
   -p ${UiPort}:$UiPort -p ${McpPort}:$McpPort `
   portal-ux-agent
 
