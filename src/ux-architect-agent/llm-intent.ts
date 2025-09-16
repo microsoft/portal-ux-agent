@@ -5,7 +5,6 @@ import type { AccessToken } from '@azure/core-auth';
 import {
   INTENT_LOG_PROMPT,
   INTENT_TIMEOUT_MS,
-  INTENT_TEMPERATURE,
   AZURE_OPENAI_ENDPOINT,
   AZURE_OPENAI_API_KEY,
   AZURE_OPENAI_DEPLOYMENT,
@@ -161,7 +160,7 @@ export async function generateIntentLLM(message: string, options?: { force?: boo
   const url = buildCompletionsUrl();
   const body: Record<string, unknown> = {
     messages: buildPrompt(message),
-    temperature: INTENT_TEMPERATURE,
+    // temperature intentionally omitted (model returns error when provided)
     response_format: { type: 'json_object' }
   };
 

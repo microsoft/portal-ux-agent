@@ -111,13 +111,23 @@ $forwardVars = @(
 $envArgs = @()
 foreach ($name in $forwardVars) {
   $val = (Get-Item -Path Env:$name -ErrorAction SilentlyContinue).Value
+  if (-not $val -and $name -eq 'SEED_SAMPLE') { $val = '0' }
   if ($val) { $envArgs += @('-e', "$name=$val") }
 }
 
+$projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$logDir = Join-Path $projectRoot 'logs'
+if (-not (Test-Path $logDir)) {
+  New-Item -Path $logDir -ItemType Directory | Out-Null
+}
+$logDirResolved = (Resolve-Path $logDir).Path
+
 docker run -d --name portal-ux-agent-run `
   -e UI_PORT=$UiPort -e MCP_PORT=$McpPort -e USE_MCP_WS=$wsFlag `
+  -e INTENT_PROMPT_LOG=/app/logs/intent-prompts.log `
   $envArgs `
   -p ${UiPort}:$UiPort -p ${McpPort}:$McpPort `
+  -v "${logDirResolved}:/app/logs" `
   portal-ux-agent
 
 $maxWait = 30
