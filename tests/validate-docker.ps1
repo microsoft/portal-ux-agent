@@ -23,7 +23,7 @@ Team availability in next sprint.
 ]
 "@,
   [string]$UserId = "",
-  [switch]$UseWs = $true
+  [switch]$UseWs = $false
 )
 
 Write-Host "=== Killing all portal-ux-agent containers ===" -ForegroundColor Cyan
@@ -39,15 +39,15 @@ function Stop-ProcessOnPort {
   try {
     $conns = Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction Stop
     $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique
-    foreach ($pid in $pids) {
-      if ($pid -and $pid -ne $PID) {
+    foreach ($procId in $pids) {
+      if ($procId -and $procId -ne $PID) {
         try {
-          $proc = Get-Process -Id $pid -ErrorAction Stop
-          Write-Host "Stopping process $($proc.ProcessName) (PID $pid) on port $Port" -ForegroundColor Yellow
-          Stop-Process -Id $pid -Force
-          $killed += $pid
+          $proc = Get-Process -Id $procId -ErrorAction Stop
+          Write-Host "Stopping process $($proc.ProcessName) (PID $procId) on port $Port" -ForegroundColor Yellow
+          Stop-Process -Id $procId -Force
+          $killed += $procId
         } catch {
-          Write-Warning "Failed to stop PID $pid on port $Port: $_"
+          Write-Warning "Failed to stop PID $procId on port ${Port}: $_"
         }
       }
     }
@@ -58,22 +58,22 @@ function Stop-ProcessOnPort {
       foreach ($line in $netstat) {
         $parts = $line -split "\s+" | Where-Object { $_ -ne '' }
         if ($parts.Length -ge 5) {
-          $pid = $parts[-1]
-          if ($pid -match '^[0-9]+$' -and [int]$pid -ne $PID) {
+          $procId = $parts[-1]
+          if ($procId -match '^[0-9]+$' -and [int]$procId -ne $PID) {
             try {
-              $proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+              $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
               $pname = if ($proc) { $proc.ProcessName } else { '<unknown>' }
-              Write-Host "Stopping PID $pid ($pname) on port $Port (fallback)" -ForegroundColor Yellow
-              Stop-Process -Id $pid -Force
-              $killed += $pid
+              Write-Host "Stopping PID $procId ($pname) on port $Port (fallback)" -ForegroundColor Yellow
+              Stop-Process -Id $procId -Force
+              $killed += $procId
             } catch {
-              Write-Warning "Fallback failed to stop PID $pid on port $Port: $_"
+              Write-Warning "Fallback failed to stop PID $procId on port ${Port}: $_"
             }
           }
         }
       }
     } catch {
-      Write-Warning "Could not inspect port $Port: $_"
+      Write-Warning "Could not inspect port ${Port}: $_"
     }
   }
   if (-not $killed.Count) {
@@ -88,7 +88,9 @@ Write-Host "=== Building image ===" -ForegroundColor Cyan
 docker build -t portal-ux-agent .
 
 Write-Host "=== Running container ===" -ForegroundColor Cyan
-$wsFlag = if ($UseWs) { '1' } else { '0' }
+# If user did not explicitly pass -UseWs, default to true (WebSocket mode)
+$effectiveUseWs = if ($PSBoundParameters.ContainsKey('UseWs')) { $UseWs } else { $true }
+$wsFlag = if ($effectiveUseWs) { '1' } else { '0' }
 docker run -d --name portal-ux-agent-run `
   -e UI_PORT=$UiPort -e MCP_PORT=$McpPort -e USE_MCP_WS=$wsFlag `
   -p ${UiPort}:$UiPort -p ${McpPort}:$McpPort `
@@ -96,7 +98,7 @@ docker run -d --name portal-ux-agent-run `
 
 $maxWait = 30
 
-if ($UseWs) {
+if ($effectiveUseWs) {
   Write-Host "=== Waiting for MCP WebSocket on port $McpPort ===" -ForegroundColor Cyan
   $wsUri = "ws://localhost:$McpPort"
   $socket = $null
