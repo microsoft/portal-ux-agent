@@ -43,7 +43,11 @@ class SimpleWebServer {
         res.writeHead(200); res.end(); return;
       }
 
-      if (pathname === '/playground-ws') {
+      if (pathname === '/playground' || pathname === '/playground/') {
+        // Backward compatibility redirect to the remaining WebSocket playground
+        res.writeHead(302, { 'Location': '/playground-ws' });
+        res.end();
+      } else if (pathname === '/playground-ws') {
         this.handlePlaygroundWs(res);
       } else if (pathname === '/playground-ws.js') {
         this.handlePlaygroundWsScript(res);
