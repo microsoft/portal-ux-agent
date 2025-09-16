@@ -151,9 +151,10 @@ export function azureOpenAIEnabled(): boolean {
   return isAzureOpenAIConfigured();
 }
 
-export async function generateIntentLLM(message: string): Promise<unknown> {
+export async function generateIntentLLM(message: string, options?: { force?: boolean }): Promise<unknown> {
+  // Removed early configuration throw: always attempt, log when not configured
   if (!azureOpenAIEnabled()) {
-    throw new Error('Azure OpenAI is not configured');
+    console.warn('[intent.llm] Azure OpenAI not fully configured; attempting call anyway.');
   }
 
   const url = buildCompletionsUrl();
@@ -172,7 +173,7 @@ export async function generateIntentLLM(message: string): Promise<unknown> {
       console.log('[intent.llm] prompt', JSON.stringify(body.messages));
     }
 
-    const headers = await buildAuthHeaders();
+  const headers = await buildAuthHeaders(); // Will throw if keys / auth missing; that is desired point of failure
     const res = await fetch(url, {
       method: 'POST',
       headers,
@@ -200,7 +201,7 @@ export async function generateIntentLLM(message: string): Promise<unknown> {
     if (err?.name === 'AbortError') {
       throw new Error('Azure OpenAI request timed out');
     }
-    throw err;
+    throw new Error(`[intent.llm] LLM call failed: ${err?.message || String(err)}`);
   } finally {
     clearTimeout(timeout);
   }

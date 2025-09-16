@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { generateIntentLLM, azureOpenAIEnabled, SUPPORTED_TEMPLATES, SUPPORTED_COMPONENTS } from './llm-intent.js';
+import { generateIntentLLM, SUPPORTED_TEMPLATES, SUPPORTED_COMPONENTS } from './llm-intent.js';
 
 // Intent schema
 const IntentSchema = z.object({
@@ -12,30 +12,7 @@ const IntentSchema = z.object({
 
 export type Intent = z.infer<typeof IntentSchema>;
 
-function legacyRuleIntent(message: string): Intent {
-  const intent: Intent = {
-    userGoal: message,
-    dataStructure: 'unknown',
-    suggestedTemplate: 'dashboard-cards-grid',
-    components: ['card', 'chart'],
-    extractedData: null,
-  };
-  const lower = message.toLowerCase();
-  if (lower.includes('dashboard') || lower.includes('metrics') || lower.includes('kpi')) {
-    intent.dataStructure = 'grid';
-    intent.suggestedTemplate = 'dashboard-cards-grid';
-    intent.components = ['kpi-card', 'chart', 'table'];
-  } else if (lower.includes('kanban') || lower.includes('board')) {
-    intent.dataStructure = 'kanban';
-    intent.suggestedTemplate = 'board-kanban';
-    intent.components = ['kanban-column', 'kanban-card'];
-  } else if (lower.includes('portal') || lower.includes('navigation')) {
-    intent.dataStructure = 'list';
-    intent.suggestedTemplate = 'portal-leftnav';
-    intent.components = ['nav-item', 'content-area'];
-  }
-  return intent;
-}
+// Legacy keyword intent removed per requirement: LLM path only.
 
 function normalizeIntent(raw: Intent): Intent {
   // Clamp template
@@ -59,18 +36,16 @@ function normalizeIntent(raw: Intent): Intent {
 }
 
 export async function processUserIntent(message: string): Promise<Intent> {
-  // Try LLM first if configured
-  if (azureOpenAIEnabled()) {
-    try {
-      const raw = await generateIntentLLM(message);
-      const parsed = IntentSchema.safeParse(raw);
-      if (parsed.success) {
-        return normalizeIntent(parsed.data);
-      }
-    } catch (err) {
-      // fall through to legacy
+  try {
+    const raw = await generateIntentLLM(message, { force: true });
+    const parsed = IntentSchema.safeParse(raw);
+    if (!parsed.success) {
+      console.error('[intent] LLM returned invalid schema:', parsed.error.flatten());
+      throw new Error('LLM intent JSON did not match schema');
     }
+    return normalizeIntent(parsed.data);
+  } catch (e: any) {
+    console.error('[intent] LLM intent generation failed (no fallback):', e?.message || e);
+    throw e instanceof Error ? e : new Error(String(e));
   }
-  // Fallback to legacy keyword rules
-  return legacyRuleIntent(message);
 }
