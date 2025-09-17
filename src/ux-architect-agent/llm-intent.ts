@@ -32,8 +32,8 @@ const PROMPT_LOG_PATH = process.env.INTENT_PROMPT_LOG || 'logs/intent-prompts.lo
 
 type PromptLogRecord =
   | { kind: 'prompt'; timestamp: string; messages: ChatMessage[]; correlationId: string }
-  | { kind: 'request'; timestamp: string; correlationId: string; url: string; method: string; headers: Record<string,string>; bodySummary: unknown; messagePreview: string }
-  | { kind: 'response'; timestamp: string; correlationId: string; status: number; ok: boolean; elapsedMs: number }
+  | { kind: 'request'; timestamp: string; correlationId: string; url: string; method: string; headers: Record<string,string>; body: string }
+  | { kind: 'response'; timestamp: string; correlationId: string; status: number; ok: boolean; elapsedMs: number; body: string }
   | { kind: 'parsed'; timestamp: string; correlationId: string; parsed: unknown }
   | { kind: 'error'; timestamp: string; correlationId: string; error: string; aborted?: boolean };
 
@@ -188,6 +188,7 @@ export async function generateIntentLLM(message: string, options?: { force?: boo
     // temperature intentionally omitted (model returns error when provided)
     response_format: { type: 'json_object' }
   };
+  const bodyJson = JSON.stringify(body);
 
   const ctrl = new AbortController();
   const timeout = setTimeout(() => ctrl.abort(), INTENT_TIMEOUT_MS);
@@ -203,9 +204,7 @@ export async function generateIntentLLM(message: string, options?: { force?: boo
         url,
         method: 'POST',
         headers: redactHeaders(headers),
-        bodySummary: { hasMessages: Array.isArray(body.messages), response_format: body.response_format },
-        // Removed truncation: log full original message
-        messagePreview: String(message)
+        body: bodyJson
       };
       console.log('[intent.llm] request', JSON.stringify(requestRecord, null, 2));
       appendIntentLog(requestRecord);
@@ -215,10 +214,11 @@ export async function generateIntentLLM(message: string, options?: { force?: boo
     const res = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify(body),
+      body: bodyJson,
       signal: ctrl.signal
     });
     const elapsedMs = Date.now() - started;
+    const rawBody = await res.text().catch(() => '');
 
     if (INTENT_LOG_PROMPT) {
       const respMeta: PromptLogRecord = {
@@ -227,21 +227,23 @@ export async function generateIntentLLM(message: string, options?: { force?: boo
         correlationId,
         status: res.status,
         ok: res.ok,
-        elapsedMs
+        elapsedMs,
+        body: rawBody
       };
-      console.log('[intent.llm] response.meta', JSON.stringify(respMeta, null, 2));
+      console.log('[intent.llm] response.full', JSON.stringify(respMeta, null, 2));
       appendIntentLog(respMeta);
     }
 
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      if (INTENT_LOG_PROMPT) {
-        console.warn('[intent.llm] response.errorBody', text);
-      }
-      throw new Error(`Azure OpenAI error ${res.status}: ${text}`);
+      throw new Error(`Azure OpenAI error ${res.status}: ${rawBody}`);
     }
 
-    const data = await res.json();
+    let data: any;
+    try {
+      data = rawBody ? JSON.parse(rawBody) : {};
+    } catch (parseErr) {
+      throw new Error('Failed to parse JSON from Azure OpenAI response: ' + (parseErr as Error).message);
+    }
     const contentText: string | undefined = data?.choices?.[0]?.message?.content;
     if (!contentText) {
       throw new Error('No content returned from Azure OpenAI');
