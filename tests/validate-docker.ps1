@@ -216,8 +216,8 @@ if ($effectiveUseWs) {
         capabilities    = @{ tools = @{} }
       }
     }
-    $initResponse = Receive-McpResponse -Socket $socket -ExpectedId $initId
-    $initResponse.Json | ConvertTo-Json -Depth 6
+  $initResponse = Receive-McpResponse -Socket $socket -ExpectedId $initId
+  $initResponse.Json | ConvertTo-Json -Depth 6 | Out-Host
 
     Send-McpMessage -Socket $socket -Message @{ jsonrpc = '2.0'; method = 'initialized' }
 
@@ -232,6 +232,7 @@ if ($effectiveUseWs) {
     $listResponse = Receive-McpResponse -Socket $socket -ExpectedId $listId
     $listResponse.Json | ConvertTo-Json -Depth 6
 
+    <#
     Write-Host "=== tools/call create_portal_ui (WS) ===" -ForegroundColor Cyan
     $arguments = @{ message = $Message }
     if ($UserId -and $UserId.Trim().Length -gt 0) { $arguments.userId = $UserId }
@@ -247,34 +248,7 @@ if ($effectiveUseWs) {
     }
     $callResponse = Receive-McpResponse -Socket $socket -ExpectedId $callId
     $callResponse.Json | ConvertTo-Json -Depth 10
-
-    $viewUrl = $null
-    $callData = $null
-    if ($callResponse.Json -and $callResponse.Json.result) {
-      $resultPayload = $callResponse.Json.result
-      if ($resultPayload.content -and $resultPayload.content.Count -gt 0) {
-        $textPayload = $resultPayload.content[0].text
-        if ($textPayload) {
-          try { $callData = $textPayload | ConvertFrom-Json } catch {
-            Write-Warning "Tool response text was not valid JSON:"
-            Write-Warning $textPayload
-          }
-        }
-      } else {
-        $callData = $resultPayload
-      }
-      if ($callData -and $callData.viewUrl) {
-        $viewUrl = $callData.viewUrl
-      }
-    }
-
-    if ($viewUrl) {
-      Write-Host "=== Fetching generated UI (first 400 chars) ===" -ForegroundColor Cyan
-      $html = (Invoke-WebRequest -UseBasicParsing -Uri $viewUrl -TimeoutSec 10).Content
-      if ($html.Length -gt 400) { $html.Substring(0,400) + '...' } else { $html }
-    } else {
-      Write-Warning "No viewUrl returned"
-    }
+    #>
 
     $effectiveUserId = if ($UserId -and $UserId.Trim()) { $UserId.Trim() } else { 'default' }
     $defaultUiUrl = "http://localhost:$UiPort/ui/$effectiveUserId"
@@ -310,7 +284,8 @@ if ($effectiveUseWs) {
   Write-Host "=== Listing tools ===" -ForegroundColor Cyan
   $tools = Invoke-RestMethod -Uri "http://localhost:$McpPort/mcp/tools" -Method Get -TimeoutSec 5
   $tools | ConvertTo-Json -Depth 4
-
+  # HTTP fallback tool invocation
+  <#
   Write-Host "=== Calling tool: create_portal_ui ===" -ForegroundColor Cyan
   $toolArgs = @{ message = $Message }
   if ($UserId -and $UserId.Trim().Length -gt 0) { $toolArgs.userId = $UserId }
@@ -325,6 +300,7 @@ if ($effectiveUseWs) {
   } else {
     Write-Warning "No viewUrl returned"
   }
+  #>
 
   $effectiveUserId = if ($UserId -and $UserId.Trim()) { $UserId.Trim() } else { 'default' }
   $defaultUiUrl = "http://localhost:$UiPort/ui/$effectiveUserId"
@@ -347,8 +323,6 @@ try {
 } catch {
   Write-Warning "Failed to open browser automatically. Open manually: $playgroundUrl"
 }
-
-
 
 
 
