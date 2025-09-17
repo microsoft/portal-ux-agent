@@ -14,9 +14,15 @@ export const KpiCardPropsSchema = z.object({
 export type KpiCardProps = z.infer<typeof KpiCardPropsSchema>;
 
 export const ChartPropsSchema = z.object({
-  type: z.enum(['line', 'bar', 'pie']).default('line'),
+  type: z.enum(['line', 'bar', 'pie', 'area', 'radar', 'radial']).default('line'),
   title: z.string().optional(),
   data: z.array(z.any()).default([]),
+  xKey: z.string().optional(),
+  yKeys: z.array(z.string()).optional(),
+  valueKey: z.string().optional(),
+  labelKey: z.string().optional(),
+  stacked: z.boolean().optional(),
+  colors: z.array(z.string()).optional(),
 });
 export type ChartProps = z.infer<typeof ChartPropsSchema>;
 
@@ -120,4 +126,3 @@ export function validateUiComponents(json: unknown): UiComponentSpec[] {
   }
   return parsed.data;
 }
-
