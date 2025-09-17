@@ -41,6 +41,10 @@ export function getCompositionByUser(userId: string): UIComposition | undefined 
   return compositionsByUser.get(userId);
 }
 
+export function setCompositionForUser(userId: string, composition: UIComposition): void {
+  compositionsByUser.set(userId, composition);
+}
+
 export function listUserIds(): string[] {
   return Array.from(compositionsByUser.keys());
 }

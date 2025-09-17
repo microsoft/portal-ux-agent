@@ -3,8 +3,9 @@ import { createServer } from 'http';
 import { parse, fileURLToPath } from 'url';
 import { readFileSync, existsSync } from 'fs';
 import { dirname, join, resolve } from 'path';
-import { getCompositionByUser, renderUI } from './ui-builder-agent/ui-renderer.js';
-import { processUserIntent } from './ux-architect-agent/intent-processor.js';
+import { getCompositionByUser } from './ui-builder-agent/ui-renderer.js';
+import { seedStaticCompositionIfNeeded } from './ui-builder-agent/static-seed.js';
+import { renderReactUI } from './server/web/react-renderer.js';
 import { DEFAULT_USER_ID } from './shared/config.js';
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
@@ -23,33 +24,20 @@ function loadSampleRequest(filename: string): string {
   throw new Error('Sample request file not found: ' + filename);
 }
 
-const DEFAULT_SAMPLE_REQUEST = loadSampleRequest('default-dashboard.txt');
 const VALIDATION_SAMPLE_REQUEST = loadSampleRequest('docker-validation.txt');
-
-interface SimpleRenderableComposition {
-  sessionId: string;
-  template: string;
-  components: Array<{ id: string; type: string; props: Record<string, any>; slot: string; }>;
-  userMessage?: string;
-}
 
 class SimpleWebServer {
   private port: number;
 
   constructor(port = Number(process.env.UI_PORT) || 3000) {
     this.port = port;
-    // Attempt seeding but do not crash container if LLM not configured
-    this.addSampleCompositions().catch(err => {
-      console.warn('[seed] Skipping sample composition:', err?.message || err);
-    });
+    this.seedStaticComposition();
   }
 
-  private async addSampleCompositions() {
-    // Seed a default composition only if none exists yet
-    if (!getCompositionByUser(DEFAULT_USER_ID)) {
-      const intent = await processUserIntent(DEFAULT_SAMPLE_REQUEST);
-      await renderUI(intent, DEFAULT_USER_ID);
-    }
+  private seedStaticComposition() {
+    seedStaticCompositionIfNeeded().catch(err => {
+      console.warn('[seed.static] Skipping static composition:', err?.message || err);
+    });
   }
 
   start() {
@@ -95,19 +83,27 @@ class SimpleWebServer {
   }
 
   private handleUIRequest(userId: string, res: any) {
-    const composition = getCompositionByUser(userId) as any as SimpleRenderableComposition | undefined;
+    const composition = getCompositionByUser(userId);
     if (!composition) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       res.end('Composition not found');
       return;
     }
-    const html = this.renderComposition(composition);
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(html);
+
+    renderReactUI(composition)
+      .then(html => {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(html);
+      })
+      .catch(err => {
+        console.error('[ui.render] Failed to render composition', err);
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Failed to render UI');
+      });
   }
 
   private handleAPIRequest(userId: string, res: any) {
-  const composition = getCompositionByUser(userId) as any as SimpleRenderableComposition | undefined;
+    const composition = getCompositionByUser(userId);
     if (!composition) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Composition not found' }));
@@ -139,15 +135,9 @@ class SimpleWebServer {
     }
   }
 
-  // Single remaining playground: WebSocket based
   private getPlaygroundWsHtml(): string {
     const mcpPort = Number(process.env.MCP_PORT) || 3001;
-    return `<!DOCTYPE html><html lang="en"><meta charset="utf-8" />
-<title>MCP WS Playground</title>
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<style>:root{--bg:#0f1115;--panel:#1b1f27;--border:#2a303a;--accent:#3d82ff;--text:#e6e8ef;--muted:#9aa1af}body{margin:0;font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);padding:32px}h1{margin-top:0;font-size:20px}.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;max-width:880px}label{display:block;font-weight:600;margin:18px 0 6px}textarea,input{width:100%;box-sizing:border-box;background:#11151c;color:var(--text);border:1px solid var(--border);border-radius:6px;padding:10px;font:inherit;resize:vertical}input{height:40px}button{background:var(--accent);color:#fff;border:none;padding:10px 18px;border-radius:6px;font:600 14px system-ui;cursor:pointer;margin-top:14px}button:disabled{opacity:.5;cursor:default}pre{background:#11151c;border:1px solid var(--border);padding:14px;border-radius:8px;overflow:auto;max-height:420px}.row{display:flex;gap:16px;flex-wrap:wrap}.small{flex:1 1 180px}footer{margin-top:32px;font-size:12px;color:var(--muted)}.status{font-size:12px;color:var(--muted);margin-left:10px}</style>
-<div class="card"><h1>MCP Tool Playground (WebSocket)</h1><form id="toolForm" method="post" novalidate><label>Message<textarea name="message" rows="18" placeholder="e.g. Dashboard with KPIs and revenue trend" required>${VALIDATION_SAMPLE_REQUEST}</textarea></label><div class="row"><div class="small"><label>User ID<input name="userId" value="default" /></label></div><div class="small"><label>WS Endpoint<input name="wsBaseUrl" value="ws://localhost:${mcpPort}" /></label></div></div><button type="submit" id="runBtn">Call create_portal_ui (WS)</button><span class="status" id="status"></span></form><h3>Response</h3><pre id="output">-</pre><h3>View URL</h3><div id="viewUrl" style="font:13px system-ui;"></div></div><footer>WebSocket subprotocol: mcp</footer>
-<script src="/playground-ws.js"></script></html>`;
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>MCP WS Playground</title><style>:root{color-scheme:dark light;font-family:system-ui}body{background:radial-gradient(circle at top,#1a2230,#0f141f);color:#fff;min-height:100vh;margin:0;display:flex;align-items:center;justify-content:center;padding:40px}.card{background:rgba(17,22,32,0.88);border:1px solid rgba(61,130,255,0.25);backdrop-filter:blur(14px);box-shadow:0 20px 60px rgba(0,0,0,0.45);border-radius:18px;padding:30px;width:min(960px,100%)}label{display:block;font-weight:600;margin:18px 0 6px}textarea,input{width:100%;box-sizing:border-box;background:#11151c;color:#f5f8ff;border:1px solid rgba(61,130,255,0.35);border-radius:8px;padding:12px;font:inherit;resize:vertical;box-shadow:inset 0 1px 4px rgba(0,0,0,0.45)}textarea{min-height:160px}input{height:42px}button{background:linear-gradient(135deg,#3d82ff,#7857ff);color:#fff;border:none;padding:12px 20px;border-radius:10px;font:600 15px system-ui;cursor:pointer;margin-top:16px;box-shadow:0 10px 30px rgba(61,130,255,0.35);transition:transform .2s ease,box-shadow .2s ease}button:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(61,130,255,0.45)}button:disabled{opacity:.45;cursor:default;transform:none;box-shadow:none}pre{background:#0d121c;border:1px solid rgba(61,130,255,0.35);padding:16px;border-radius:10px;overflow:auto;max-height:420px;font-size:13px;line-height:1.55;color:#b4c7ff}.row{display:flex;gap:18px;flex-wrap:wrap}.small{flex:1 1 200px}footer{margin-top:28px;font-size:12px;color:rgba(255,255,255,0.45)}.status{font-size:12px;color:rgba(255,255,255,0.55);margin-left:10px}</style></head><body><div class="card"><h1>MCP Tool Playground (WebSocket)</h1><form id="toolForm" method="post" novalidate><label>Message<textarea name="message" rows="18" placeholder="e.g. Dashboard with KPIs and revenue trend" required>${VALIDATION_SAMPLE_REQUEST}</textarea></label><div class="row"><div class="small"><label>User ID<input name="userId" value="default" /></label></div><div class="small"><label>WS Endpoint<input name="wsBaseUrl" value="ws://localhost:${mcpPort}" /></label></div></div><button type="submit" id="runBtn">Call create_portal_ui (WS)</button><span class="status" id="status"></span></form><h3>Response</h3><pre id="output">-</pre><h3>View URL</h3><div id="viewUrl" style="font:13px system-ui;"></div></div><footer>WebSocket subprotocol: mcp</footer><script src="/playground-ws.js"></script></body></html>`;
   }
 
   private getPlaygroundWsScript(): string {
@@ -178,146 +168,6 @@ class SimpleWebServer {
 `  }catch(err){ statusEl.textContent='Error'; out.textContent=String(err); } finally { btn.disabled=false; }\n`+
 `});\n`+
 `})();\n`;
-  }
-
-
-  private renderComposition(composition: SimpleRenderableComposition): string {
-    const templateHTML = this.getTemplateHTML(composition.template);
-    const slotComponents: Record<string, string[]> = {};
-  composition.components.forEach((component: { id: string; type: string; props: Record<string, any>; slot: string; }) => {
-      if (!slotComponents[component.slot]) slotComponents[component.slot] = [];
-      slotComponents[component.slot].push(this.renderComponent(component));
-    });
-    let finalHTML = templateHTML;
-    for (const [slotName, components] of Object.entries(slotComponents)) {
-      finalHTML = finalHTML.replace(`<slot name="${slotName}"></slot>`, components.join(''));
-    }
-    return this.wrapInDocument(finalHTML, composition);
-  }
-
-  private getTemplateHTML(templateId: string): string {
-    const templates: Record<string, string> = {
-      'dashboard-cards-grid': `
-        <div class="dashboard-container">
-          <header class="dashboard-header">
-            <h1>Dashboard</h1>
-          </header>
-          <section class="kpi-row">
-            <slot name="kpiRow"></slot>
-          </section>
-          <main class="cards-grid">
-            <slot name="cardsGrid"></slot>
-          </main>
-        </div>
-      `,
-      'portal-leftnav': `
-        <div class="portal-container">
-          <nav class="left-nav">
-            <slot name="nav"></slot>
-          </nav>
-          <div class="main-content">
-            <header class="top-header">
-              <h1>Portal</h1>
-            </header>
-            <main class="content-area">
-              <slot name="content"></slot>
-            </main>
-          </div>
-        </div>
-      `,
-      'board-kanban': `
-        <div class="kanban-board">
-          <div class="board-toolbar">
-            <h1>Kanban Board</h1>
-          </div>
-          <div class="board-columns">
-            <slot name="columns"></slot>
-          </div>
-        </div>
-      `
-    };
-    return templates[templateId] || '<div>Unknown template</div>';
-  }
-
-  private renderComponent(component: any): string {
-    const { type, props } = component;
-    switch (type) {
-      case 'kpi-card':
-        return `
-          <div class="card kpi-card">
-            <h3>${props.title || 'KPI'}</h3>
-            <div class="value">${props.value || '0'}</div>
-            <div class="trend trend-${props.trend || 'neutral'}">${props.trend || 'neutral'}</div>
-          </div>
-        `;
-      case 'chart':
-        return `
-          <div class="card chart-card">
-            <h3>${props.title || 'Chart'}</h3>
-            <div class="chart-placeholder">
-              <div style="height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; border-radius: 4px;">
-                📊 ${props.type || 'line'} chart would go here
-              </div>
-            </div>
-          </div>
-        `;
-      case 'nav-item':
-        return `
-          <div class="nav-item">
-            <a href="${props.href || '#'}">${props.icon || '📄'} ${props.label || 'Item'}</a>
-          </div>
-        `;
-      default:
-        return `<div class="card">Unknown component: ${type}</div>`;
-    }
-  }
-
-  private wrapInDocument(content: string, composition: SimpleRenderableComposition): string {
-    return `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Portal UI - ${composition.sessionId}</title>
-        <style>
-          body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; }
-          .dashboard-container { padding: 20px; max-width: 1200px; margin: 0 auto; }
-          .dashboard-header { margin-bottom: 20px; }
-          .dashboard-header h1 { margin: 0; color: #333; }
-          .kpi-row { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
-          .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-          .card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-          .kpi-card { min-width: 200px; text-align: center; }
-          .kpi-card h3 { margin: 0 0 8px 0; font-size: 14px; color: #666; font-weight: normal; }
-          .kpi-card .value { font-size: 24px; font-weight: bold; color: #333; margin-bottom: 4px; }
-          .kpi-card .trend { font-size: 12px; }
-          .trend-up { color: #22c55e; }
-          .trend-down { color: #ef4444; }
-          .trend-neutral { color: #6b7280; }
-          .chart-placeholder { margin-top: 10px; }
-          .portal-container { display: flex; height: 100vh; }
-          .left-nav { width: 250px; background: #fff; border-right: 1px solid #ddd; padding: 20px; }
-          .main-content { flex: 1; display: flex; flex-direction: column; }
-          .top-header { padding: 20px; border-bottom: 1px solid #ddd; background: white; }
-          .top-header h1 { margin: 0; }
-          .content-area { flex: 1; padding: 20px; }
-          .nav-item { padding: 8px 0; }
-          .nav-item a { text-decoration: none; color: #333; display: flex; align-items: center; gap: 8px; }
-          .nav-item a:hover { color: #2563eb; }
-          .kanban-board { padding: 20px; }
-          .board-toolbar { margin-bottom: 20px; }
-          .board-toolbar h1 { margin: 0; }
-          .board-columns { display: flex; gap: 20px; }
-          .info-banner { background: #dbeafe; border: 1px solid #93c5fd; border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 14px; color: #1e40af; }
-        </style>
-      </head>
-      <body>
-        <div class="info-banner">🤖 Generated from: "${composition.userMessage || 'User request'}" | Session: ${composition.sessionId}</div>
-        ${content}
-      </body>
-      </html>
-    `;
   }
 }
 

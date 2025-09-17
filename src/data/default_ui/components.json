@@ -1,0 +1,58 @@
+[
+  {
+    "id": "kpi-velocity",
+    "type": "KpiCard",
+    "slot": "kpiRow",
+    "library": "shadcn",
+    "props": {
+      "title": "Velocity",
+      "value": 48,
+      "trend": "up"
+    }
+  },
+  {
+    "id": "kpi-capacity",
+    "type": "KpiCard",
+    "slot": "kpiRow",
+    "library": "shadcn",
+    "props": {
+      "title": "Team Capacity",
+      "value": 50,
+      "trend": "neutral"
+    }
+  },
+  {
+    "id": "chart-velocity",
+    "type": "Chart",
+    "slot": "cardsGrid",
+    "library": "shadcn",
+    "props": {
+      "type": "bar",
+      "title": "Velocity (6 sprints)",
+      "data": [
+        { "sprint": "Sprint 7", "storiesBurned": 42 },
+        { "sprint": "Sprint 8", "storiesBurned": 35 },
+        { "sprint": "Sprint 9", "storiesBurned": 48 },
+        { "sprint": "Sprint 10", "storiesBurned": 39 },
+        { "sprint": "Sprint 11", "storiesBurned": 44 },
+        { "sprint": "Sprint 12", "storiesBurned": 47 }
+      ]
+    }
+  },
+  {
+    "id": "table-availability",
+    "type": "Table",
+    "slot": "cardsGrid",
+    "library": "shadcn",
+    "props": {
+      "columns": ["member", "capacity", "assigned", "availability", "notes"],
+      "data": [
+        { "member": "Alice", "capacity": 10, "assigned": 7, "availability": 3, "notes": "Can take 1 small task" },
+        { "member": "Bob", "capacity": 10, "assigned": 10, "availability": 0, "notes": "Fully loaded" },
+        { "member": "Charlie", "capacity": 10, "assigned": 5, "availability": 5, "notes": "Available for big task" },
+        { "member": "Diana", "capacity": 10, "assigned": 8, "availability": 2, "notes": "Lightly loaded" },
+        { "member": "Ethan", "capacity": 10, "assigned": 6, "availability": 4, "notes": "Medium availability" }
+      ]
+    }
+  }
+]
