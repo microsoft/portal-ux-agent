@@ -9,7 +9,7 @@ RUN npm ci
 # Build TypeScript
 COPY tsconfig.json ./
 COPY src ./src
-RUN npm run build
+RUN npm run build && mkdir -p dist/data && cp -R src/data/. dist/data/
 
 # Production image
 FROM node:20-slim AS runner

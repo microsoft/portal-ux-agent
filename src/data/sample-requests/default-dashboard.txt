@@ -1,0 +1,6 @@
+Team's velocity in last 3 sprints, measured by stories burned.
+[
+  { "sprint": "Sprint 7", "burned": 42 },
+  { "sprint": "Sprint 8", "burned": 35 },
+  { "sprint": "Sprint 9", "burned": 48 }
+]

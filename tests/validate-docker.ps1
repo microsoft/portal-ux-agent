@@ -2,29 +2,20 @@
 param(
   [int]$UiPort = 3000,
   [int]$McpPort = 3001,
-  [string]$Message = @"
-Team's velocity in last 6 sprints, measured by stories burned.
-[
-  { "sprint": "Sprint 7", "burned": 42 },
-  { "sprint": "Sprint 8", "burned": 35 },
-  { "sprint": "Sprint 9", "burned": 48 },
-  { "sprint": "Sprint 10", "burned": 39 },
-  { "sprint": "Sprint 11", "burned": 44 },
-  { "sprint": "Sprint 12", "burned": 47 }
-]
-
-Team availability in next sprint.
-[
-  { "member": "Alice",   "capacity": 10, "assigned": 7, "availability": 3, "notes": "Can take 1 small task" },
-  { "member": "Bob",     "capacity": 10, "assigned": 10, "availability": 0, "notes": "Fully loaded" },
-  { "member": "Charlie", "capacity": 10, "assigned": 5, "availability": 5, "notes": "Available for big task" },
-  { "member": "Diana",   "capacity": 10, "assigned": 8, "availability": 2, "notes": "Lightly loaded" },
-  { "member": "Ethan",   "capacity": 10, "assigned": 6, "availability": 4, "notes": "Medium availability" }
-]
-"@,
+  [string]$Message = $null,
   [string]$UserId = "",
   [switch]$UseWs = $false
 )
+
+# Load default sample request if Message not provided
+$sampleRequestDir = Join-Path $PSScriptRoot '..' 'src' 'data' 'sample-requests'
+$defaultSamplePath = Join-Path $sampleRequestDir 'docker-validation.txt'
+if (-not $Message -or -not $Message.Trim()) {
+  if (-not (Test-Path $defaultSamplePath)) {
+    throw "Sample request file not found: $defaultSamplePath"
+  }
+  $Message = Get-Content -Path $defaultSamplePath -Raw
+}
 
 Write-Host "=== Killing all portal-ux-agent containers ===" -ForegroundColor Cyan
 docker ps -aq --filter "ancestor=portal-ux-agent" | ForEach-Object { docker rm -f $_ }
