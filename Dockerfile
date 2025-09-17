@@ -21,6 +21,8 @@ RUN npm ci --omit=dev
 
 # Copy built files
 COPY --from=builder /app/dist ./dist
+# Static assets for runtime (CSS/JS)
+COPY public ./dist/public
 
 ENV NODE_ENV=production \
     UI_PORT=3000 \
@@ -29,4 +31,3 @@ ENV NODE_ENV=production \
 EXPOSE 3000 3001
 
 CMD ["node", "dist/start-combined.js"]
-
