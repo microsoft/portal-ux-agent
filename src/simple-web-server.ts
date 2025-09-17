@@ -28,7 +28,13 @@ class SimpleWebServer {
   private async addSampleCompositions() {
     // Seed a default composition only if none exists yet
     if (!getCompositionByUser(DEFAULT_USER_ID)) {
-      const intent = await processUserIntent('sample dashboard with kpis');
+      const intent = await processUserIntent(`Team's velocity in last 3 sprints, measured by stories burned.
+[
+  { "sprint": "Sprint 7", "burned": 42 },
+  { "sprint": "Sprint 8", "burned": 35 },
+  { "sprint": "Sprint 9", "burned": 48 }
+]
+`);
       await renderUI(intent, DEFAULT_USER_ID);
     }
   }
