@@ -275,6 +275,19 @@ if ($effectiveUseWs) {
     } else {
       Write-Warning "No viewUrl returned"
     }
+
+    $effectiveUserId = if ($UserId -and $UserId.Trim()) { $UserId.Trim() } else { 'default' }
+    $defaultUiUrl = "http://localhost:$UiPort/ui/$effectiveUserId"
+    Write-Host "=== Verifying default UI page ===" -ForegroundColor Cyan
+    $defaultUiResponse = Invoke-WebRequest -UseBasicParsing -Uri $defaultUiUrl -TimeoutSec 10
+    Write-Host ("Default UI OK ({0} bytes)" -f $defaultUiResponse.RawContentLength) -ForegroundColor Green
+    try {
+      Write-Host ("Opening default UI in browser: {0}" -f $defaultUiUrl) -ForegroundColor DarkCyan
+      Start-Process $defaultUiUrl | Out-Null
+    } catch {
+      Write-Warning "Failed to open default UI automatically. Open manually: $defaultUiUrl"
+    }
+
   } finally {
     if ($socket -and $socket.State -eq [System.Net.WebSockets.WebSocketState]::Open) {
       $socket.CloseAsync([System.Net.WebSockets.WebSocketCloseStatus]::NormalClosure, 'done', [System.Threading.CancellationToken]::None).GetAwaiter().GetResult()
@@ -312,6 +325,18 @@ if ($effectiveUseWs) {
   } else {
     Write-Warning "No viewUrl returned"
   }
+
+  $effectiveUserId = if ($UserId -and $UserId.Trim()) { $UserId.Trim() } else { 'default' }
+  $defaultUiUrl = "http://localhost:$UiPort/ui/$effectiveUserId"
+  Write-Host "=== Verifying default UI page ===" -ForegroundColor Cyan
+  $defaultUiResponse = Invoke-WebRequest -UseBasicParsing -Uri $defaultUiUrl -TimeoutSec 10
+  Write-Host ("Default UI OK ({0} bytes)" -f $defaultUiResponse.RawContentLength) -ForegroundColor Green
+  try {
+    Write-Host ("Opening default UI in browser: {0}" -f $defaultUiUrl) -ForegroundColor DarkCyan
+    Start-Process $defaultUiUrl | Out-Null
+  } catch {
+    Write-Warning "Failed to open default UI automatically. Open manually: $defaultUiUrl"
+  }
 }
 
 Write-Host "=== Opening WebSocket playground in browser ===" -ForegroundColor Cyan
@@ -322,3 +347,8 @@ try {
 } catch {
   Write-Warning "Failed to open browser automatically. Open manually: $playgroundUrl"
 }
+
+
+
+
+
