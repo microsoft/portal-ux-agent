@@ -1,37 +1,44 @@
 import { z } from 'zod';
-import { generateIntentLLM, SUPPORTED_TEMPLATES, SUPPORTED_COMPONENTS } from './llm-intent.js';
+import { UiComponentSpecArraySchema, type UiComponentSpec } from '../ui-component-library/specs.js';
+import { generateIntentLLM, SUPPORTED_TEMPLATES } from './llm-intent.js';
 
-// Intent schema
 const IntentSchema = z.object({
-	userGoal: z.string(),
-	dataStructure: z.enum(['list', 'grid', 'kanban', 'chart', 'form', 'unknown']),
-	suggestedTemplate: z.string(),
-	components: z.array(z.string()),
-	extractedData: z.any().optional()
+  template: z.string(),
+  components: UiComponentSpecArraySchema,
+  styles: z.array(z.string()).optional(),
+  scripts: z.array(z.string()).optional(),
 });
 
-export type Intent = z.infer<typeof IntentSchema>;
+export type LlmIntentPayload = z.infer<typeof IntentSchema>;
 
-// Legacy keyword intent removed per requirement: LLM path only.
+export interface Intent {
+  template: (typeof SUPPORTED_TEMPLATES)[number];
+  components: UiComponentSpec[];
+  styles: string[];
+  scripts: string[];
+}
 
-function normalizeIntent(raw: Intent): Intent {
-  // Clamp template
-  const template = SUPPORTED_TEMPLATES.includes(raw.suggestedTemplate as any)
-    ? raw.suggestedTemplate
+function normalizeIntent(raw: LlmIntentPayload): Intent {
+  const template = SUPPORTED_TEMPLATES.includes(raw.template as any)
+    ? (raw.template as (typeof SUPPORTED_TEMPLATES)[number])
     : 'dashboard-cards-grid';
-  // Filter components
-  const components = (raw.components || []).filter(c => (SUPPORTED_COMPONENTS as readonly string[]).includes(c));
-  // Clamp dataStructure
-  const allowedStructures = ['list', 'grid', 'kanban', 'chart', 'form', 'unknown'] as const;
-  const dataStructure = (allowedStructures as readonly string[]).includes(raw.dataStructure)
-    ? raw.dataStructure
-    : 'unknown';
+
+  const components = raw.components.map((component, index) => ({
+    ...component,
+    id: component.id && component.id.trim().length > 0
+      ? component.id.trim()
+      : `${component.type}-${index}`,
+    library: component.library ?? 'shadcn',
+  }));
+
+  const uniqueStrings = (values: string[] | undefined): string[] =>
+    Array.from(new Set((values || []).map(v => v.trim()).filter(Boolean)));
+
   return {
-    userGoal: raw.userGoal || '',
-    dataStructure,
-    suggestedTemplate: template,
-    components: components.length ? components : ['card'],
-    extractedData: raw.extractedData ?? null,
+    template,
+    components,
+    styles: uniqueStrings(raw.styles),
+    scripts: uniqueStrings(raw.scripts),
   };
 }
 

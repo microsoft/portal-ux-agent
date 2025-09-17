@@ -4,7 +4,8 @@ import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_USER_ID } from '../shared/config.js';
 import { loadTemplate } from '../templates/template-loader.js';
-import type { Component } from '../ui-component-library/component-mapper.js';
+// Note: We purposefully do not use the generic Component shape from component-mapper
+// here because UIComposition expects strongly typed UiComponentSpec items (discriminated union).
 import { UiComponentSpecArraySchema, type UiComponentSpec } from '../ui-component-library/specs.js';
 import { getCompositionByUser, setCompositionForUser, type UIComposition } from './ui-renderer.js';
 
@@ -89,16 +90,10 @@ export async function seedStaticCompositionIfNeeded(userId: string = DEFAULT_USE
     const template = await loadTemplate(templateId);
     const sessionId = uuidv4();
 
-    const components: Component[] = specs.map((spec, index) => {
-      const suppliedId = (spec as any).id ? String((spec as any).id).trim() : '';
-      const generatedId = `${spec.type.toLowerCase()}-${index}-${sessionId.slice(0, 8)}`;
-      return {
-        id: suppliedId || generatedId,
-        type: spec.type,
-        library: spec.library ?? 'shadcn',
-        props: { ...(spec.props as Record<string, any>) },
-        slot: spec.slot
-      };
+    // Ensure every spec has a stable id; reuse validated spec objects directly.
+    const components: UiComponentSpec[] = specs.map((spec, index) => {
+      const id = spec.id && spec.id.trim() ? spec.id : `${spec.type}-${index}-${sessionId.slice(0, 8)}`;
+      return { ...spec, id };
     });
 
     const composition: UIComposition = {

@@ -15,15 +15,14 @@ import {
 } from '../shared/config.js';
 
 export const SUPPORTED_TEMPLATES = ['dashboard-cards-grid', 'portal-leftnav', 'board-kanban'] as const;
-export const SUPPORTED_COMPONENTS = [
-  'kpi-card',
-  'chart',
-  'table',
-  'nav-item',
-  'kanban-column',
-  'kanban-card',
-  'card',
-  'content-area'
+export const SUPPORTED_COMPONENT_TYPES = [
+  'KpiCard',
+  'Chart',
+  'Table',
+  'Card',
+  'NavItem',
+  'KanbanColumn',
+  'KanbanCard'
 ] as const;
 
 type ChatMessage = { role: 'system' | 'user'; content: string };
@@ -55,60 +54,44 @@ function logPromptMessages(messages: ChatMessage[], correlationId: string): void
 
 function buildPrompt(message: string): ChatMessage[] {
   const system = `You are an intent-to-UI planner for a Portal UI generator.
-Return ONLY one compact JSON object (no prose, no markdown) with this shape:
+Return ONLY one compact JSON object (no prose, no markdown) that the renderer can use directly.
+
+Schema:
 {
-  "userGoal": string,
-  "dataStructure": "list" | "grid" | "kanban" | "chart" | "form" | "unknown",
-  "suggestedTemplate": string,        // one of: ${SUPPORTED_TEMPLATES.join(', ')}
-  "components": string[],             // hyphen-case IDs, subset of: ${SUPPORTED_COMPONENTS.join(', ')}
-  "extractedData": {
-    // optional structured information
-    "componentsDetailed"?: [
-      {
-        "type": "KpiCard" | "Chart" | "Table" | "Card" | "NavItem" | "KanbanColumn" | "KanbanCard",
-        "library": "shadcn",
-        "slot": string,               // valid slot for template (see Slots below)
-        "props": object               // must match Component Props below
-      }
-    ]
-  }
+  "template": string,                 // one of: ${SUPPORTED_TEMPLATES.join(', ')}
+  "styles"?: string[],                // optional extra stylesheet paths
+  "scripts"?: string[],               // optional extra script paths
+  "components": [
+    {
+      "id"?: string,                  // optional stable id
+      "type": ${SUPPORTED_COMPONENT_TYPES.map(t=>`"${t}"`).join(' | ')},
+      "slot": string,                 // valid slot for the chosen template (see below)
+      "library"?: "shadcn",
+      "props": object                 // component specific props
+    }
+  ]
 }
 
-Slots by template:
-- dashboard-cards-grid
-  - header: accepts [title, toolbar]
-  - kpiRow: accepts [kpi-card, metric]
-  - cardsGrid: accepts [card, chart, table]
-- portal-leftnav
-  - nav: accepts [nav-item]
-  - header: accepts [title, user-menu]
-  - content: accepts [page, form, table, chart]
-- board-kanban
-  - toolbar: accepts [button, filter]
-  - columns: accepts [kanban-column]
-  - cards: accepts [kanban-card]
+Template slots:
+- dashboard-cards-grid: header (title, toolbar), kpiRow (KpiCard), cardsGrid (Card, Chart, Table)
+- portal-leftnav: nav (NavItem), header (Card or simple header), content (Card, Table, Chart, etc.)
+- board-kanban: toolbar (Card/Button summary), columns (KanbanColumn), cards (KanbanCard)
 
-Component Props (must conform):
-- kpi-card -> type: KpiCard
-  props: { title: string, value: string|number, trend: "up"|"down"|"neutral", icon?: string }
-- chart -> type: Chart
-  props: { type: "line"|"bar"|"pie", title?: string, data: any[] }
-- table -> type: Table
-  props: { columns: (string|object)[], data: any[], sortable?: boolean }
-- card -> type: Card
-  props: { title?: string, content?: string, actions?: any[] }
-- nav-item -> type: NavItem
-  props: { label: string, href?: string, icon?: string }
-- kanban-column -> type: KanbanColumn
-  props: { title: string, limit?: number|null, cards: any[] }
-- kanban-card -> type: KanbanCard
-  props: { title: string, description?: string, assignee?: string, priority?: "low"|"medium"|"high" }
+Component props:
+- KpiCard props { title: string, value: string|number, trend: "up"|"down"|"neutral", icon?: string }
+- Chart props { type: "line"|"bar"|"pie", title?: string, data: any[] }
+- Table props { columns: (string|object)[], data: any[], sortable?: boolean }
+- Card props { title?: string, content?: string, actions?: any[] }
+- NavItem props { label: string, href?: string, icon?: string }
+- KanbanColumn props { title: string, limit?: number|null, cards: any[] }
+- KanbanCard props { title: string, description?: string, assignee?: string, priority?: "low"|"medium"|"high" }
 
-Rules:
-- Pick the best template; set dataStructure.
-- Fill "components" with compatible hyphen-case IDs for backward compatibility.
-- If possible, provide "extractedData.componentsDetailed" with fully specified elements ready to render.
-- No explanations or comments — JSON object only.`;
+Guidance:
+- Choose the most appropriate template and populate every required slot with meaningful demo data derived from the user's request.
+- Prefer concise, business-friendly values (e.g. KPI names, numeric metrics, mock table rows).
+- Ensure props arrays (table columns/data, chart data, kanban cards) are non-empty when the user request implies data.
+- Keep the JSON minimal but valid; omit any fields you do not need.
+- No explanations or trailing comments.`;
 
   const user = `User message: ${message}`;
   const messages: ChatMessage[] = [
