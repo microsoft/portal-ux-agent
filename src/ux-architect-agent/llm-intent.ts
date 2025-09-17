@@ -204,7 +204,8 @@ export async function generateIntentLLM(message: string, options?: { force?: boo
         method: 'POST',
         headers: redactHeaders(headers),
         bodySummary: { hasMessages: Array.isArray(body.messages), response_format: body.response_format },
-        messagePreview: String(message).slice(0,200)
+        // Removed truncation: log full original message
+        messagePreview: String(message)
       };
       console.log('[intent.llm] request', JSON.stringify(requestRecord, null, 2));
       appendIntentLog(requestRecord);
@@ -235,7 +236,7 @@ export async function generateIntentLLM(message: string, options?: { force?: boo
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       if (INTENT_LOG_PROMPT) {
-        console.warn('[intent.llm] response.errorBody (truncated)', text.slice(0, 2000));
+        console.warn('[intent.llm] response.errorBody', text);
       }
       throw new Error(`Azure OpenAI error ${res.status}: ${text}`);
     }
