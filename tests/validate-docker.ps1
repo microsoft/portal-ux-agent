@@ -97,13 +97,23 @@ Write-Host "=== Ensuring ports $UiPort and $McpPort are free ===" -ForegroundCol
 foreach ($p in @($UiPort, $McpPort)) { Stop-ProcessOnPort -Port $p }
 
 Write-Host "=== Building image ===" -ForegroundColor Cyan
-docker build -t portal-ux-agent .
+${null} = Push-Location (Resolve-Path (Join-Path $PSScriptRoot '..'))
+try {
+  docker build -t portal-ux-agent .
+} finally {
+  Pop-Location
+}
 
 Write-Host "=== Running container ===" -ForegroundColor Cyan
 # If user did not explicitly pass -UseWs, default to true (WebSocket mode)
 $effectiveUseWs = if ($PSBoundParameters.ContainsKey('UseWs')) { $UseWs } else { $true }
 $wsFlag = if ($effectiveUseWs) { '1' } else { '0' }
 Write-Host "=== Preparing docker run environment variables ===" -ForegroundColor Cyan
+$currentIntentLog = (Get-Item -Path Env:INTENT_LOG_PROMPT -ErrorAction SilentlyContinue).Value
+if (-not $currentIntentLog) {
+  Write-Host "INTENT_LOG_PROMPT not set; defaulting to 1 for validation run" -ForegroundColor DarkYellow
+  $env:INTENT_LOG_PROMPT = '1'
+}
 $forwardVars = @(
   'AZURE_OPENAI_ENDPOINT','AZURE_OPENAI_API_KEY','AZURE_OPENAI_DEPLOYMENT','AZURE_OPENAI_API_VERSION',
   'AZURE_OPENAI_USE_AAD','AZURE_OPENAI_SCOPE','INTENT_LOG_PROMPT','SEED_SAMPLE'

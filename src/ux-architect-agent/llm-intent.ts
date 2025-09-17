@@ -30,20 +30,27 @@ type ChatMessage = { role: 'system' | 'user'; content: string };
 
 const PROMPT_LOG_PATH = process.env.INTENT_PROMPT_LOG || 'logs/intent-prompts.log';
 
-function logPromptMessages(messages: ChatMessage[]): void {
+type PromptLogRecord =
+  | { kind: 'prompt'; timestamp: string; messages: ChatMessage[]; correlationId: string }
+  | { kind: 'request'; timestamp: string; correlationId: string; url: string; method: string; headers: Record<string,string>; bodySummary: unknown; messagePreview: string }
+  | { kind: 'response'; timestamp: string; correlationId: string; status: number; ok: boolean; elapsedMs: number }
+  | { kind: 'parsed'; timestamp: string; correlationId: string; parsed: unknown }
+  | { kind: 'error'; timestamp: string; correlationId: string; error: string; aborted?: boolean };
+
+function appendIntentLog(record: PromptLogRecord) {
+  if (!INTENT_LOG_PROMPT) return; // safeguard (though default is on)
   try {
     const absolutePath = resolve(process.cwd(), PROMPT_LOG_PATH);
     const directory = dirname(absolutePath);
-    if (directory) {
-      mkdirSync(directory, { recursive: true });
-    }
-    const payload = JSON.stringify({ timestamp: new Date().toISOString(), messages });
-    appendFileSync(absolutePath, `${payload}\n`);
+    if (directory) mkdirSync(directory, { recursive: true });
+    appendFileSync(absolutePath, JSON.stringify(record) + '\n');
   } catch (error) {
-    if (INTENT_LOG_PROMPT) {
-      console.warn('[intent.llm] failed to write prompt log', error);
-    }
+    console.warn('[intent.llm] failed to append intent log', (error as Error)?.message || error);
   }
+}
+
+function logPromptMessages(messages: ChatMessage[], correlationId: string): void {
+  appendIntentLog({ kind: 'prompt', timestamp: new Date().toISOString(), messages, correlationId });
 }
 
 function buildPrompt(message: string): ChatMessage[] {
@@ -108,7 +115,9 @@ Rules:
     { role: 'system', content: system },
     { role: 'user', content: user }
   ];
-  logPromptMessages(messages);
+  // Correlation ID not yet known here; a temporary one may be generated later. We'll pass placeholder and overwrite if needed.
+  // Actual correlationId is created in generateIntentLLM so we only log prompt once the true correlationId is known.
+  // So we defer logging; caller passes correlationId.
   return messages;
 }
 
@@ -171,32 +180,34 @@ export async function generateIntentLLM(message: string, options?: { force?: boo
   }
 
   const url = buildCompletionsUrl();
+  const correlationId = Math.random().toString(36).slice(2,10);
+  const promptMessages = buildPrompt(message);
+  logPromptMessages(promptMessages, correlationId);
   const body: Record<string, unknown> = {
-    messages: buildPrompt(message),
+    messages: promptMessages,
     // temperature intentionally omitted (model returns error when provided)
     response_format: { type: 'json_object' }
   };
 
   const ctrl = new AbortController();
   const timeout = setTimeout(() => ctrl.abort(), INTENT_TIMEOUT_MS);
-  const correlationId = Math.random().toString(36).slice(2,10);
 
   try {
     const headers = await buildAuthHeaders(); // Will throw if keys / auth missing; that is desired point of failure
 
     if (INTENT_LOG_PROMPT) {
-      try {
-        console.log('[intent.llm] request', JSON.stringify({
-          correlationId,
-          url,
-          method: 'POST',
-          headers: redactHeaders(headers),
-          body,
-          messagePreview: String(message).slice(0,200)
-        }, null, 2));
-      } catch (e) {
-        console.warn('[intent.llm] failed to log request', (e as Error)?.message || e);
-      }
+      const requestRecord: PromptLogRecord = {
+        kind: 'request',
+        timestamp: new Date().toISOString(),
+        correlationId,
+        url,
+        method: 'POST',
+        headers: redactHeaders(headers),
+        bodySummary: { hasMessages: Array.isArray(body.messages), response_format: body.response_format },
+        messagePreview: String(message).slice(0,200)
+      };
+      console.log('[intent.llm] request', JSON.stringify(requestRecord, null, 2));
+      appendIntentLog(requestRecord);
     }
 
     const started = Date.now();
@@ -209,12 +220,16 @@ export async function generateIntentLLM(message: string, options?: { force?: boo
     const elapsedMs = Date.now() - started;
 
     if (INTENT_LOG_PROMPT) {
-      console.log('[intent.llm] response.meta', JSON.stringify({
+      const respMeta: PromptLogRecord = {
+        kind: 'response',
+        timestamp: new Date().toISOString(),
         correlationId,
         status: res.status,
         ok: res.ok,
         elapsedMs
-      }, null, 2));
+      };
+      console.log('[intent.llm] response.meta', JSON.stringify(respMeta, null, 2));
+      appendIntentLog(respMeta);
     }
 
     if (!res.ok) {
@@ -232,16 +247,22 @@ export async function generateIntentLLM(message: string, options?: { force?: boo
     }
     const parsed = JSON.parse(contentText);
     if (INTENT_LOG_PROMPT) {
-      console.log('[intent.llm] parsed', { correlationId, parsed });
+      const parsedRecord: PromptLogRecord = { kind: 'parsed', timestamp: new Date().toISOString(), correlationId, parsed };
+      console.log('[intent.llm] parsed', parsedRecord);
+      appendIntentLog(parsedRecord);
     }
     return parsed;
   } catch (err: any) {
     if (INTENT_LOG_PROMPT) {
-      console.error('[intent.llm] failure', {
+      const errorRecord: PromptLogRecord = {
+        kind: 'error',
+        timestamp: new Date().toISOString(),
         correlationId,
         error: err?.message || String(err),
         aborted: err?.name === 'AbortError'
-      });
+      };
+      console.error('[intent.llm] failure', errorRecord);
+      appendIntentLog(errorRecord);
     }
     if (err?.name === 'AbortError') {
       throw new Error('Azure OpenAI request timed out');
