@@ -6,63 +6,48 @@ import { groupBySlot, specToReactElement } from '../../ui-component-library/rend
 import type { UiComponentSpec } from '../../ui-component-library/specs.js';
 
 export async function renderReactUI(composition: UIComposition): Promise<string> {
-  // Create the React component tree based on composition
   const specs = (composition.components as unknown as UiComponentSpec[]);
-  const componentElements = specs.map(specToReactElement);
   const slotComponents = groupBySlot(specs);
 
-  // Render the template with components in slots
   const templateHTML = composition.templateData.html;
-  
-  // Simple slot replacement (in production, use a proper template engine)
-  let finalHTML = templateHTML;
-  for (const [slotName, components] of Object.entries(slotComponents)) {
-    const slotPlaceholder = `<slot name="${slotName}"></slot>`;
-    const componentHTML = components.map(comp => renderToString(comp)).join('');
-    finalHTML = finalHTML.replace(slotPlaceholder, componentHTML);
+  const slots = composition.templateData.slots || [];
+
+  let filledHTML = templateHTML;
+
+  for (const slot of slots) {
+    const slotName = slot.name;
+    const elements = slotComponents[slotName] || [];
+    const rendered = elements.map(el => renderToString(el)).join('');
+    const placeholder = new RegExp(`<slot\\s+name=\"${slotName}\"\s*><\\/slot>`, 'gi');
+    filledHTML = filledHTML.replace(placeholder, rendered);
+    delete slotComponents[slotName];
   }
 
-  // Wrap in full HTML document
-  const fullHTML = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Portal UI - ${composition.sessionId}</title>
-  ${composition.styles.map((style: string) => `<link rel="stylesheet" href="${style}">`).join('')}
-      <style>
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-        .dashboard-container { padding: 20px; }
-        .dashboard-header { margin-bottom: 20px; }
-        .kpi-row { display: flex; gap: 20px; margin-bottom: 20px; }
-        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .portal-container { display: flex; height: 100vh; }
-        .left-nav { width: 250px; background: #f5f5f5; padding: 20px; }
-        .main-content { flex: 1; display: flex; flex-direction: column; }
-        .top-header { padding: 20px; border-bottom: 1px solid #ddd; }
-        .content-area { flex: 1; padding: 20px; }
-      </style>
-    </head>
-    <body>
-      <div class="portal-container">
-        <div class="left-nav">
-          ${renderToString(slotComponents['nav'] ? React.createElement(React.Fragment, null, ...slotComponents['nav']) : React.createElement('div', null))}
-        </div>
-        <div class="main-content">
-          <div class="top-header">
-            ${renderToString(slotComponents['header'] ? React.createElement(React.Fragment, null, ...slotComponents['header']) : React.createElement('div', null))}
-          </div>
-          <div class="content-area">
-            ${renderToString(slotComponents['main'] ? React.createElement(React.Fragment, null, ...slotComponents['main']) : React.createElement('div', null))}
-          </div>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  filledHTML = filledHTML.replace(/<slot[^>]*><\/slot>/gi, '');
 
-  return fullHTML;
+  const leftover = Object.entries(slotComponents)
+    .map(([slotName, elements]) => `<!-- unplaced slot: ${slotName} -->${elements.map(el => renderToString(el)).join('')}`)
+    .join('');
+
+  const styleLinks = (composition.styles || []).map((style: string) => `<link rel="stylesheet" href="${style}">`).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal UI - ${composition.sessionId}</title>
+  ${styleLinks}
+  <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #111827; }
+    a { color: inherit; }
+  </style>
+</head>
+<body>
+  ${filledHTML}
+  ${leftover}
+</body>
+</html>`;
 }
 
 export function renderComponent(component: any): string {

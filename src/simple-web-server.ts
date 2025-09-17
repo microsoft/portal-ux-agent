@@ -14,6 +14,11 @@ const SAMPLE_REQUEST_DIRS = [
   resolve(process.cwd(), 'src', 'data', 'sample-requests')
 ];
 
+const STATIC_DIRS = [
+  resolve(process.cwd(), 'public'),
+  resolve(moduleDir, 'public')
+];
+
 function loadSampleRequest(filename: string): string {
   for (const dir of SAMPLE_REQUEST_DIRS) {
     const candidate = join(dir, filename);
@@ -57,6 +62,8 @@ class SimpleWebServer {
         // Backward compatibility redirect to the remaining WebSocket playground
         res.writeHead(302, { 'Location': '/playground-ws' });
         res.end();
+      } else if (pathname && this.tryServeStatic(pathname, res)) {
+        // Static asset served
       } else if (pathname === '/playground-ws') {
         this.handlePlaygroundWs(res);
       } else if (pathname === '/playground-ws.js') {
@@ -80,6 +87,34 @@ class SimpleWebServer {
       console.log(`Simple Web Server running on http://localhost:${this.port}`);
       console.log(`Try: http://localhost:${this.port}/ui/${DEFAULT_USER_ID}`);
     });
+  }
+
+  private tryServeStatic(pathname: string, res: any): boolean {
+    if (!pathname.startsWith('/styles/') && !pathname.startsWith('/scripts/')) {
+      return false;
+    }
+
+    const relativePath = pathname.replace(/^\//, '');
+    for (const dir of STATIC_DIRS) {
+      const candidate = join(dir, relativePath);
+      if (existsSync(candidate)) {
+        const ext = candidate.split('.').pop()?.toLowerCase();
+        const contentType = ext === 'css' ? 'text/css' : ext === 'js' ? 'application/javascript' : 'application/octet-stream';
+        try {
+          const content = readFileSync(candidate);
+          res.writeHead(200, { 'Content-Type': contentType });
+          res.end(content);
+          return true;
+        } catch (err) {
+          console.error('[static] Failed to read asset', candidate, err);
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end('Static asset error');
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   private handleUIRequest(userId: string, res: any) {
