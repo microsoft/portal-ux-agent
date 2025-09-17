@@ -123,6 +123,12 @@ if (-not (Test-Path $logDir)) {
 }
 $logDirResolved = (Resolve-Path $logDir).Path
 
+# Clean previous intent prompt logs to keep validation run deterministic
+$promptLogPath = Join-Path $logDirResolved 'intent-prompts.log'
+if (Test-Path $promptLogPath) {
+  Remove-Item -Path $promptLogPath -Force -ErrorAction SilentlyContinue
+}
+
 docker run -d --name portal-ux-agent-run `
   -e UI_PORT=$UiPort -e MCP_PORT=$McpPort -e USE_MCP_WS=$wsFlag `
   -e INTENT_PROMPT_LOG=/app/logs/intent-prompts.log `
@@ -323,6 +329,5 @@ try {
 } catch {
   Write-Warning "Failed to open browser automatically. Open manually: $playgroundUrl"
 }
-
 
 
