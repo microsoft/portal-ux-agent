@@ -85,6 +85,182 @@ const componentMappings = new Map<string, ComponentMapping>([
       assignee: '',
       priority: 'medium'
     }
+  }],
+  ['text-input', {
+    componentType: 'Input',
+    defaultProps: {
+      label: 'Label',
+      type: 'text',
+      value: '',
+      placeholder: 'Enter value',
+      disabled: false
+    },
+    dataMapping: {
+      'value': 'value',
+      'label': 'label',
+      'placeholder': 'placeholder',
+      'type': 'inputType'
+    }
+  }],
+  ['textarea', {
+    componentType: 'Textarea',
+    defaultProps: {
+      label: 'Description',
+      value: '',
+      placeholder: '',
+      rows: 4,
+      disabled: false
+    },
+    dataMapping: {
+      'value': 'value',
+      'label': 'label',
+      'placeholder': 'placeholder',
+      'rows': 'rows'
+    }
+  }],
+  ['select', {
+    componentType: 'Select',
+    defaultProps: {
+      label: 'Select option',
+      value: '',
+      placeholder: 'Choose...',
+      disabled: false,
+      multiple: false,
+      options: []
+    },
+    dataMapping: {
+      'value': 'value',
+      'label': 'label',
+      'placeholder': 'placeholder',
+      'options': 'options',
+      'multiple': 'multiple'
+    }
+  }],
+  ['combobox', {
+    componentType: 'Combobox',
+    defaultProps: {
+      label: 'Search options',
+      value: '',
+      placeholder: 'Search...',
+      disabled: false,
+      options: []
+    },
+    dataMapping: {
+      'value': 'value',
+      'label': 'label',
+      'placeholder': 'placeholder',
+      'options': 'options'
+    }
+  }],
+  ['autocomplete', {
+    componentType: 'Combobox',
+    defaultProps: {
+      label: 'Search options',
+      value: '',
+      placeholder: 'Search...',
+      disabled: false,
+      options: []
+    },
+    dataMapping: {
+      'value': 'value',
+      'label': 'label',
+      'placeholder': 'placeholder',
+      'options': 'options'
+    }
+  }],
+  ['checkbox', {
+    componentType: 'Checkbox',
+    defaultProps: {
+      label: 'Enable option',
+      checked: false,
+      disabled: false
+    },
+    dataMapping: {
+      'checked': 'checked',
+      'label': 'label'
+    }
+  }],
+  ['radio-group', {
+    componentType: 'RadioGroup',
+    defaultProps: {
+      label: 'Choose option',
+      value: '',
+      disabled: false,
+      options: []
+    },
+    dataMapping: {
+      'value': 'value',
+      'label': 'label',
+      'options': 'options'
+    }
+  }],
+  ['switch', {
+    componentType: 'Switch',
+    defaultProps: {
+      label: 'Toggle option',
+      checked: false,
+      disabled: false
+    },
+    dataMapping: {
+      'checked': 'checked',
+      'label': 'label'
+    }
+  }],
+  ['alert', {
+    componentType: 'Alert',
+    defaultProps: {
+      variant: 'info',
+      title: 'Notice',
+      description: ''
+    },
+    dataMapping: {
+      'variant': 'variant',
+      'title': 'title',
+      'description': 'description'
+    }
+  }],
+  ['alert-dialog', {
+    componentType: 'AlertDialog',
+    defaultProps: {
+      title: 'Confirm action',
+      description: '',
+      confirmLabel: 'Confirm',
+      cancelLabel: 'Cancel'
+    },
+    dataMapping: {
+      'title': 'title',
+      'description': 'description',
+      'confirmLabel': 'confirmLabel',
+      'cancelLabel': 'cancelLabel'
+    }
+  }],
+  ['search-box', {
+    componentType: 'SearchBox',
+    defaultProps: {
+      label: 'Search',
+      value: '',
+      placeholder: 'Search...',
+      disabled: false
+    },
+    dataMapping: {
+      'value': 'value',
+      'label': 'label',
+      'placeholder': 'placeholder'
+    }
+  }],
+  ['search', {
+    componentType: 'SearchBox',
+    defaultProps: {
+      label: 'Search',
+      value: '',
+      placeholder: 'Search...',
+      disabled: false
+    },
+    dataMapping: {
+      'value': 'value',
+      'label': 'label',
+      'placeholder': 'placeholder'
+    }
   }]
 ]);
 
