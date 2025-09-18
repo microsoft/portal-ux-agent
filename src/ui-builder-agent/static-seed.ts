@@ -11,14 +11,21 @@ import { getCompositionByUser, setCompositionForUser, type UIComposition } from 
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
 
+// Support both source-tree (dev) and compiled (dist) layouts. When built into
+// the Docker image the runtime files live under `dist/data/...` so include
+// those locations in the candidate lists.
 const COMPONENT_PATHS = [
   resolve(process.cwd(), 'src', 'data', 'default_ui', 'components.json'),
-  resolve(moduleDir, '..', 'data', 'default_ui', 'components.json')
+  resolve(process.cwd(), 'dist', 'data', 'default_ui', 'components.json'),
+  resolve(moduleDir, '..', 'data', 'default_ui', 'components.json'),
+  resolve(moduleDir, '..', '..', 'dist', 'data', 'default_ui', 'components.json')
 ];
 
 const TEMPLATE_PATHS = [
   resolve(process.cwd(), 'src', 'data', 'default_ui', 'template.txt'),
-  resolve(moduleDir, '..', 'data', 'default_ui', 'template.txt')
+  resolve(process.cwd(), 'dist', 'data', 'default_ui', 'template.txt'),
+  resolve(moduleDir, '..', 'data', 'default_ui', 'template.txt'),
+  resolve(moduleDir, '..', '..', 'dist', 'data', 'default_ui', 'template.txt')
 ];
 
 function findFirstExisting(paths: string[]): string | undefined {
@@ -50,7 +57,7 @@ function loadTemplateId(): string {
 function loadComponentSpecs(): UiComponentSpec[] {
   const componentPath = findFirstExisting(COMPONENT_PATHS);
   if (!componentPath) {
-    throw new Error('Static UI components file not found at expected locations');
+    throw new Error('Static UI components file not found at expected locations: ' + COMPONENT_PATHS.join(', '));
   }
 
   const raw = readFileSync(componentPath, 'utf-8');

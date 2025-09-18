@@ -1,42 +1,24 @@
 [
   {
-    "id": "kpi-velocity",
-    "type": "KpiCard",
-    "slot": "kpiRow",
-    "library": "shadcn",
-    "props": {
-      "title": "Velocity",
-      "value": 48,
-      "trend": "up"
-    }
-  },
-  {
-    "id": "kpi-capacity",
-    "type": "KpiCard",
-    "slot": "kpiRow",
-    "library": "shadcn",
-    "props": {
-      "title": "Team Capacity",
-      "value": 50,
-      "trend": "neutral"
-    }
-  },
-  {
     "id": "chart-velocity",
     "type": "Chart",
     "slot": "cardsGrid",
     "library": "shadcn",
     "props": {
       "type": "bar",
-      "title": "Velocity (6 sprints)",
+      "title": "Team Velocity (last 6 sprints)",
       "data": [
-        { "sprint": "Sprint 7", "storiesBurned": 42 },
-        { "sprint": "Sprint 8", "storiesBurned": 35 },
-        { "sprint": "Sprint 9", "storiesBurned": 48 },
-        { "sprint": "Sprint 10", "storiesBurned": 39 },
-        { "sprint": "Sprint 11", "storiesBurned": 44 },
-        { "sprint": "Sprint 12", "storiesBurned": 47 }
-      ]
+        { "sprint": "Sprint 7", "burned": 42 },
+        { "sprint": "Sprint 8", "burned": 35 },
+        { "sprint": "Sprint 9", "burned": 48 },
+        { "sprint": "Sprint 10", "burned": 39 },
+        { "sprint": "Sprint 11", "burned": 44 },
+        { "sprint": "Sprint 12", "burned": 47 }
+      ],
+      "xKey": "sprint",
+      "yKeys": ["burned"],
+      "valueKey": "burned",
+      "colors": ["#2563eb"]
     }
   },
   {
@@ -45,6 +27,7 @@
     "slot": "cardsGrid",
     "library": "shadcn",
     "props": {
+      "title": "Team Availability Next Sprint",
       "columns": ["member", "capacity", "assigned", "availability", "notes"],
       "data": [
         { "member": "Alice", "capacity": 10, "assigned": 7, "availability": 3, "notes": "Can take 1 small task" },
@@ -52,6 +35,128 @@
         { "member": "Charlie", "capacity": 10, "assigned": 5, "availability": 5, "notes": "Available for big task" },
         { "member": "Diana", "capacity": 10, "assigned": 8, "availability": 2, "notes": "Lightly loaded" },
         { "member": "Ethan", "capacity": 10, "assigned": 6, "availability": 4, "notes": "Medium availability" }
+      ]
+    }
+  },
+  {
+    "id": "chart-burndown",
+    "type": "Chart",
+    "slot": "cardsGrid",
+    "library": "shadcn",
+    "props": {
+      "type": "line",
+      "title": "Sprint Burndown",
+      "data": [
+        { "day": "Day 1", "remaining": 42 },
+        { "day": "Day 2", "remaining": 38 },
+        { "day": "Day 3", "remaining": 35 },
+        { "day": "Day 4", "remaining": 30 },
+        { "day": "Day 5", "remaining": 25 },
+        { "day": "Day 6", "remaining": 18 },
+        { "day": "Day 7", "remaining": 10 },
+        { "day": "Day 8", "remaining": 5 }
+      ],
+      "xKey": "day",
+      "yKeys": ["remaining"],
+      "valueKey": "remaining",
+      "colors": ["#16a34a"]
+    }
+  },
+  {
+    "id": "table-backlog",
+    "type": "Table",
+    "slot": "cardsGrid",
+    "library": "shadcn",
+    "props": {
+      "title": "Product Backlog",
+      "columns": ["id", "title", "priority", "status"],
+      "data": [
+        { "id": "US-101", "title": "User login with SSO", "priority": "High", "status": "Ready" },
+        { "id": "US-102", "title": "Profile page redesign", "priority": "Medium", "status": "In Review" },
+        { "id": "US-103", "title": "Notification system", "priority": "Low", "status": "New" },
+        { "id": "BUG-220", "title": "Fix checkout crash", "priority": "High", "status": "Ready" },
+        { "id": "US-104", "title": "Team dashboard charts", "priority": "Medium", "status": "New" }
+      ]
+    }
+  },
+  {
+    "id": "kpi-1",
+    "type": "KpiCard",
+    "slot": "kpiRow",
+    "library": "shadcn",
+    "props": { "title": "Sprint Goal Completion", "value": "85%", "trend": "up" }
+  },
+  {
+    "id": "kpi-2",
+    "type": "KpiCard",
+    "slot": "kpiRow",
+    "library": "shadcn",
+    "props": { "title": "Bugs Found", "value": 12, "trend": "down" }
+  },
+  {
+    "id": "kpi-3",
+    "type": "KpiCard",
+    "slot": "kpiRow",
+    "library": "shadcn",
+    "props": { "title": "Code Coverage", "value": "78%", "trend": "neutral" }
+  },
+  {
+    "id": "kpi-4",
+    "type": "KpiCard",
+    "slot": "kpiRow",
+    "library": "shadcn",
+    "props": { "title": "Deployments This Sprint", "value": 4, "trend": "up" }
+  },
+  {
+    "id": "kanban-col-1",
+    "type": "KanbanColumn",
+    "slot": "cardsGrid",
+    "library": "shadcn",
+    "props": {
+      "name": "To Do",
+      "title": "To Do",
+      "cards": [
+        { "id": "US-201", "title": "Setup CI/CD pipeline", "assignee": "Alice" },
+        { "id": "US-202", "title": "Write unit tests for payment flow", "assignee": "Charlie" }
+      ]
+    }
+  },
+  {
+    "id": "kanban-col-2",
+    "type": "KanbanColumn",
+    "slot": "cardsGrid",
+    "library": "shadcn",
+    "props": {
+      "name": "In Progress",
+      "title": "In Progress",
+      "cards": [
+        { "id": "US-203", "title": "Implement search API", "assignee": "Bob" }
+      ]
+    }
+  },
+  {
+    "id": "kanban-col-3",
+    "type": "KanbanColumn",
+    "slot": "cardsGrid",
+    "library": "shadcn",
+    "props": {
+      "name": "Review",
+      "title": "Review",
+      "cards": [
+        { "id": "BUG-301", "title": "Fix login redirect bug", "assignee": "Diana" }
+      ]
+    }
+  },
+  {
+    "id": "kanban-col-4",
+    "type": "KanbanColumn",
+    "slot": "cardsGrid",
+    "library": "shadcn",
+    "props": {
+      "name": "Done",
+      "title": "Done",
+      "cards": [
+        { "id": "US-204", "title": "Create onboarding flow", "assignee": "Ethan" }
       ]
     }
   }
