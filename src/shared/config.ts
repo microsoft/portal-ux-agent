@@ -9,7 +9,7 @@ export const AZURE_OPENAI_SCOPE = process.env.AZURE_OPENAI_SCOPE || 'https://cog
 export const AZURE_OPENAI_USE_AAD = (process.env.AZURE_OPENAI_USE_AAD || '0') === '1';
 
 // Intent generation runtime flags
-export const INTENT_TIMEOUT_MS = Number(process.env.INTENT_TIMEOUT_MS || 12000);
+export const INTENT_TIMEOUT_MS = Number(process.env.INTENT_TIMEOUT_MS || 50000);
 // Default logging ON by default so that prompt + meta tracing is always captured unless explicitly disabled.
 export const INTENT_LOG_PROMPT = (process.env.INTENT_LOG_PROMPT || '1') === '1';
 
