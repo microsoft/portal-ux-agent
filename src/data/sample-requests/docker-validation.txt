@@ -1,18 +1,44 @@
-Team's velocity in last 6 sprints, measured by stories burned.
+Current sprint burndown chart.
 [
-  { "sprint": "Sprint 7", "burned": 42 },
-  { "sprint": "Sprint 8", "burned": 35 },
-  { "sprint": "Sprint 9", "burned": 48 },
-  { "sprint": "Sprint 10", "burned": 39 },
-  { "sprint": "Sprint 11", "burned": 44 },
-  { "sprint": "Sprint 12", "burned": 47 }
+  { "day": "Day 1", "remaining": 42 },
+  { "day": "Day 2", "remaining": 38 },
+  { "day": "Day 3", "remaining": 35 },
+  { "day": "Day 4", "remaining": 30 },
+  { "day": "Day 5", "remaining": 25 },
+  { "day": "Day 6", "remaining": 18 },
+  { "day": "Day 7", "remaining": 10 },
+  { "day": "Day 8", "remaining": 5 }
 ]
-
-Team availability in next sprint.
+Product backlog priority list.
 [
-  { "member": "Alice",   "capacity": 10, "assigned": 7, "availability": 3, "notes": "Can take 1 small task" },
-  { "member": "Bob",     "capacity": 10, "assigned": 10, "availability": 0, "notes": "Fully loaded" },
-  { "member": "Charlie", "capacity": 10, "assigned": 5, "availability": 5, "notes": "Available for big task" },
-  { "member": "Diana",   "capacity": 10, "assigned": 8, "availability": 2, "notes": "Lightly loaded" },
-  { "member": "Ethan",   "capacity": 10, "assigned": 6, "availability": 4, "notes": "Medium availability" }
+  { "id": "US-101", "title": "User login with SSO", "priority": "High", "status": "Ready" },
+  { "id": "US-102", "title": "Profile page redesign", "priority": "Medium", "status": "In Review" },
+  { "id": "US-103", "title": "Notification system", "priority": "Low", "status": "New" },
+  { "id": "BUG-220", "title": "Fix checkout crash", "priority": "High", "status": "Ready" },
+  { "id": "US-104", "title": "Team dashboard charts", "priority": "Medium", "status": "New" }
 ]
+Team KPIs summary.
+[
+  { "metric": "Sprint Goal Completion", "value": "85%", "trend": "positive" },
+  { "metric": "Bugs Found", "value": 12, "trend": "negative" },
+  { "metric": "Code Coverage", "value": "78%", "trend": "neutral" },
+  { "metric": "Deployments This Sprint", "value": 4, "trend": "positive" }
+]
+Kanban board.
+{
+  "columns": [
+    { "name": "To Do", "cards": [
+      { "id": "US-201", "title": "Setup CI/CD pipeline", "assignee": "Alice" },
+      { "id": "US-202", "title": "Write unit tests for payment flow", "assignee": "Charlie" }
+    ]},
+    { "name": "In Progress", "cards": [
+      { "id": "US-203", "title": "Implement search API", "assignee": "Bob" }
+    ]},
+    { "name": "Review", "cards": [
+      { "id": "BUG-301", "title": "Fix login redirect bug", "assignee": "Diana" }
+    ]},
+    { "name": "Done", "cards": [
+      { "id": "US-204", "title": "Create onboarding flow", "assignee": "Ethan" }
+    ]}
+  ]
+}

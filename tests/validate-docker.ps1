@@ -8,7 +8,7 @@ param(
 )
 
 # Load default sample request if Message not provided
-$sampleRequestDir = Join-Path $PSScriptRoot '..' 'src' 'data' 'sample-requests'
+$sampleRequestDir = Join-Path $PSScriptRoot '..\src\data\sample-requests'
 $defaultSamplePath = Join-Path $sampleRequestDir 'docker-validation.txt'
 if (-not $Message -or -not $Message.Trim()) {
   if (-not (Test-Path $defaultSamplePath)) {
@@ -22,7 +22,7 @@ docker ps -aq --filter "ancestor=portal-ux-agent" | ForEach-Object { docker rm -
 docker rm -f portal-ux-agent-run 2>$null
 
 # Auto-load .env if present (without exporting secrets to logs)
-$envFile = Join-Path $PSScriptRoot '..' '.env'
+$envFile = Join-Path $PSScriptRoot '..\.env'
 if (Test-Path $envFile) {
   Write-Host "=== Loading .env ===" -ForegroundColor Cyan
   Get-Content $envFile | Where-Object { $_ -and $_ -notmatch '^\s*#' } | ForEach-Object {
