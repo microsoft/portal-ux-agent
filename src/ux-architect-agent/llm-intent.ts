@@ -79,7 +79,17 @@ Template slots:
 
 Component props:
 - KpiCard props { title: string, value: string|number, trend: "up"|"down"|"neutral", icon?: string }
-- Chart props { type: "line"|"bar"|"pie", title?: string, data: any[] }
+- Chart props {
+    type: "line"|"bar"|"pie"|"area"|"radar"|"radial",
+    title?: string,
+    data: any[],
+    xKey?: string,
+    yKeys?: string[],
+    valueKey?: string,
+    labelKey?: string,
+    stacked?: boolean,
+    colors?: string[]
+  }
 - Table props { columns: (string|object)[], data: any[], sortable?: boolean }
 - Card props { title?: string, content?: string, actions?: any[] }
 - NavItem props { label: string, href?: string, icon?: string }

@@ -8,17 +8,39 @@
       "type": "bar",
       "title": "Team Velocity (last 6 sprints)",
       "data": [
-        { "sprint": "Sprint 7", "burned": 42 },
-        { "sprint": "Sprint 8", "burned": 35 },
-        { "sprint": "Sprint 9", "burned": 48 },
-        { "sprint": "Sprint 10", "burned": 39 },
-        { "sprint": "Sprint 11", "burned": 44 },
-        { "sprint": "Sprint 12", "burned": 47 }
+        {
+          "sprint": "Sprint 7",
+          "storiesBurned": 42
+        },
+        {
+          "sprint": "Sprint 8",
+          "storiesBurned": 35
+        },
+        {
+          "sprint": "Sprint 9",
+          "storiesBurned": 48
+        },
+        {
+          "sprint": "Sprint 10",
+          "storiesBurned": 39
+        },
+        {
+          "sprint": "Sprint 11",
+          "storiesBurned": 44
+        },
+        {
+          "sprint": "Sprint 12",
+          "storiesBurned": 47
+        }
       ],
       "xKey": "sprint",
-      "yKeys": ["burned"],
-      "valueKey": "burned",
-      "colors": ["#2563eb"]
+      "yKeys": [
+        "storiesBurned"
+      ],
+      "valueKey": "storiesBurned",
+      "colors": [
+        "#2563eb"
+      ]
     }
   },
   {
@@ -27,14 +49,27 @@
     "slot": "cardsGrid",
     "library": "shadcn",
     "props": {
-      "title": "Team Availability Next Sprint",
       "columns": ["member", "capacity", "assigned", "availability", "notes"],
       "data": [
-        { "member": "Alice", "capacity": 10, "assigned": 7, "availability": 3, "notes": "Can take 1 small task" },
-        { "member": "Bob", "capacity": 10, "assigned": 10, "availability": 0, "notes": "Fully loaded" },
-        { "member": "Charlie", "capacity": 10, "assigned": 5, "availability": 5, "notes": "Available for big task" },
-        { "member": "Diana", "capacity": 10, "assigned": 8, "availability": 2, "notes": "Lightly loaded" },
-        { "member": "Ethan", "capacity": 10, "assigned": 6, "availability": 4, "notes": "Medium availability" }
+        {
+          "label": "Features",
+          "value": 32
+        },
+        {
+          "label": "Bugs",
+          "value": 12
+        },
+        {
+          "label": "Chores",
+          "value": 6
+        },
+        {
+          "label": "Research",
+          "value": 8
+        }
+      ],
+      "colors": [
+        "#8b5cf6"
       ]
     }
   },
