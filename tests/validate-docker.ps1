@@ -60,7 +60,7 @@ function Stop-ProcessOnPort {
 
 # Function: Try UI endpoints
 function Test-UiEndpoints {
-  param([int]$UiPort, [string]$UserId)
+  param([int]$UiPort, [string]$UserId, [switch]$OpenBrowser)
 
   $baseUiUrl = "http://localhost:$UiPort"
   $uiCandidates = @(
@@ -76,11 +76,13 @@ function Test-UiEndpoints {
       $res = Invoke-WebRequest -UseBasicParsing -Uri $url -TimeoutSec 10
       if ($res.StatusCode -eq 200) {
         Write-Host ("✅ UI available at {0} ({1} bytes)" -f $url, $res.RawContentLength) -ForegroundColor Green
-        try {
-          Write-Host ("Opening UI in browser: {0}" -f $url) -ForegroundColor DarkCyan
-          Start-Process $url | Out-Null
-        } catch {
-          Write-Warning "Failed to open browser automatically. Open manually: $url"
+        if ($OpenBrowser) {
+          try {
+            Write-Host ("Opening UI in browser: {0}" -f $url) -ForegroundColor DarkCyan
+            Start-Process $url | Out-Null
+          } catch {
+            Write-Warning "Failed to open browser automatically. Open manually: $url"
+          }
         }
         return $true
       }
@@ -130,7 +132,20 @@ if ($effectiveUseWs) {
 
   # ✅ New UI check
   Write-Host "=== Verifying UI page ===" -ForegroundColor Cyan
-  Test-UiEndpoints -UiPort $UiPort -UserId $effectiveUserId
+  $uiReady = $false
+  for ($i = 0; $i -lt $maxWait; $i++) {
+    if (Test-UiEndpoints -UiPort $UiPort -UserId $effectiveUserId) {
+      $uiReady = $true
+      break
+    }
+    Start-Sleep -Seconds 1
+  }
+  if (-not $uiReady) {
+    Write-Warning "UI did not become ready within $maxWait seconds."
+  } else {
+    # Open the UI once in browser after it's confirmed ready
+    Test-UiEndpoints -UiPort $UiPort -UserId $effectiveUserId -OpenBrowser
+  }
 
 } else {
   Write-Host "=== Waiting for health on MCP port $McpPort ===" -ForegroundColor Cyan
