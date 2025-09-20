@@ -1,0 +1,12 @@
+[
+  {
+    "id": "welcome-text",
+    "type": "Card",
+    "slot": "cardsGrid",
+    "library": "shadcn",
+    "props": {
+      "title": "Welcome",
+      "content": "Welcome to Portal UX Agent. Talk to me anything to render"
+    }
+  }
+]

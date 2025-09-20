@@ -88,6 +88,10 @@ Available templates:
 - `portal-leftnav`: Enterprise portal with left navigation
 - `board-kanban`: Kanban board with drag-and-drop columns
 
+## Default UI Seed
+
+The development web server seeds a demo composition from files in src/data/default_ui. By default it uses components_01.json. Set the DEFAULT_UI_COMPONENTS_FILE environment variable (for example components_empty.json) to point at a different JSON file in that directory and seed either an empty or custom layout. If the specified file cannot be found the loader falls back to the legacy components.json.
+
 ## Testing Utilities
 
 Helper scripts now live in `tests/`:
