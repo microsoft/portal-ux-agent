@@ -1,0 +1,6 @@
+Design an internal portal page that lets a release manager:
+- View current release train status (phases: plan, build, test, deploy)
+- See a kanban of open release tasks (columns: Backlog, In Progress, Blocked, Done)
+- Inspect a chart of error rate over last 24h
+- Trigger a "Generate Release Notes" action
+Return a structured UI plan.

@@ -1,0 +1,7 @@
+# Python evaluation harness dependencies (currently optional / minimal)
+# Add real LLM or HTTP client libs here when integrating a judge.
+# Examples:
+# openai>=1.0.0
+# azure-ai-openai>=1.0.0b1
+# tiktoken
+# requests
