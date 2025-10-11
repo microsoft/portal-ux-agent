@@ -15,7 +15,7 @@ ROOT = Path(__file__).parent.parent
 DATASET = ROOT / 'dataset' / 'ux-agent.jsonl'
 OUT_ROOT = ROOT / 'out'
 
-JUDGE_SCRIPT = ROOT.parent / 'scripts' / 'judge.py'  # reuse existing judge
+JUDGE_SCRIPT = ROOT / 'scripts' / 'judge.py'  # corrected path: eval/scripts/judge.py
 PROMPT_TEMPLATE = Path(__file__).parent / 'judge' / 'prompt_template.txt'
 
 
@@ -95,7 +95,7 @@ def append_jsonl(path: Path, obj: dict):
 def summarize_run(run_dir: Path, merged: List[dict]):
     import statistics
     overall = [m['judge']['overall'] for m in merged if m.get('judge')]
-    cov = [m['autoscore']['scores']['componentCoverage'] for m in merged]
+    cov = [m['autoscore'].get('componentCoverage', 0.0) for m in merged]
     out_lines = [
         f"Items: {len(merged)}",
         f"Coverage(mean): {sum(cov)/len(cov):.3f}",
