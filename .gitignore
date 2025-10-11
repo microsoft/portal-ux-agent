@@ -108,3 +108,9 @@ combined.*.log
 # Azure deployment files
 .azure/
 logs/
+
+# Evaluation run artifacts (generated)
+eval/out/runs/
+
+# Python cache directories for eval autoscore
+eval/pipeline/autoscore/__pycache__/
