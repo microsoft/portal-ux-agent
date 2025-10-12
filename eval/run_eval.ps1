@@ -14,9 +14,6 @@ actual LLM interpretation/scoring is desired:
 
 If AZURE_OPENAI_ENDPOINT is missing, runs that call judge.py will fail early.
 
-.PARAMETER DatasetPath
-Path to dataset root (default: eval/dataset)
-
 .PARAMETER RunRoot
 Directory under which run_judge_over_dataset.py will create timestamped runs (default: eval/runs)
 
@@ -42,7 +39,7 @@ Optional prefix for generated record IDs.
 Skip records whose output directory already contains score.json
 
 .EXAMPLE
-pwsh ./eval/run_eval.ps1 -DatasetPath eval/dataset -Limit 5 -Filter dashboard
+pwsh ./eval/run_eval.ps1 -Limit 5 -Filter dashboard
 
 .EXAMPLE
 pwsh ./eval/run_eval.ps1 -MCPMode stub
@@ -50,7 +47,6 @@ pwsh ./eval/run_eval.ps1 -MCPMode stub
 #>
 [CmdletBinding()]
 param(
-  [string]$DatasetPath = "eval/dataset",
   [string]$RunRoot = "eval/runs",
   [ValidateSet("stub","echo","http")] [string]$MCPMode = "stub",
   [string]$MCPEndpoint,
@@ -62,14 +58,13 @@ param(
 )
 
 function Import-RepoRootDotEnv {
-  param([string]$RepoRoot)
-  $envPath = Join-Path $RepoRoot ".env"
-  if (-not (Test-Path -LiteralPath $envPath)) {
-    Write-Host "No repo root .env found at $envPath; continuing with existing environment." -ForegroundColor Yellow
+  param([string]$EnvPath)
+  if (-not (Test-Path -LiteralPath $EnvPath)) {
+    Write-Host "No repo root .env found at $EnvPath; continuing with existing environment." -ForegroundColor Yellow
     return $false
   }
-  Write-Host "Loading environment from $envPath" -ForegroundColor Cyan
-  Get-Content -LiteralPath $envPath | ForEach-Object {
+  Write-Host "Loading environment from $EnvPath" -ForegroundColor Cyan
+  Get-Content -LiteralPath $EnvPath | ForEach-Object {
     $line = $_.Trim()
     if (-not $line -or $line.StartsWith('#')) { return }
     $idx = $line.IndexOf('=')
@@ -83,10 +78,9 @@ function Import-RepoRootDotEnv {
   return $true
 }
 
-# Resolve paths
+# Resolve paths relative to this script (which is in eval/)
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path   # eval/
-$RepoRoot  = Resolve-Path (Join-Path $ScriptDir "..") | Select-Object -ExpandProperty Path
-$envLoaded = Import-RepoRootDotEnv -RepoRoot $RepoRoot
+$envLoaded = Import-RepoRootDotEnv -EnvPath (Join-Path $ScriptDir "../.env")
 
 # Derive model if absent
 if (-not $Model) {
@@ -100,7 +94,6 @@ $ArgsList = @(
   "--mcp-mode", $MCPMode,
   "--model", $Model
 )
-if ($DatasetPath)  { $ArgsList += @("--dataset-path", $DatasetPath) }
 if ($MCPEndpoint)  { $ArgsList += @("--mcp-endpoint", $MCPEndpoint) }
 if ($Limit)        { $ArgsList += @("--limit", $Limit) }
 if ($Filter)       { $ArgsList += @("--filter", $Filter) }
@@ -109,9 +102,8 @@ if ($SkipExisting) { $ArgsList += @("--skip-existing") }
 
 Write-Host "----------------------------------------------" -ForegroundColor DarkGray
 Write-Host "Multi-record Evaluation Run" -ForegroundColor Green
-Write-Host " RepoRoot    : $RepoRoot"
 Write-Host " .env Loaded : $envLoaded"
-Write-Host " DatasetPath : $DatasetPath"
+Write-Host " DatasetPath : (hard-coded in load_dataset.py)"
 Write-Host " RunRoot     : $RunRoot"
 Write-Host " MCPMode     : $MCPMode"
 Write-Host " Model       : $Model"
@@ -122,8 +114,14 @@ if ($SkipExisting) { Write-Host " SkipExisting: True" }
 if ($env:AZURE_OPENAI_ENDPOINT) { Write-Host " Azure OpenAI Endpoint: $($env:AZURE_OPENAI_ENDPOINT)" } else { Write-Host " Azure OpenAI Endpoint: (not set)" }
 Write-Host "----------------------------------------------" -ForegroundColor DarkGray
 
-& $Python @ArgsList
-$exitCode = $LASTEXITCODE
+# Change to parent directory (repo root) to run the Python script
+Push-Location (Join-Path $ScriptDir "..")
+try {
+  & $Python @ArgsList
+  $exitCode = $LASTEXITCODE
+} finally {
+  Pop-Location
+}
 if ($exitCode -ne 0) {
   Write-Error "Evaluation failed (exit $exitCode)"
   exit $exitCode

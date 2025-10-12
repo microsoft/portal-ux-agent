@@ -114,3 +114,6 @@ eval/out/runs/
 
 # Python cache directories for eval autoscore
 eval/pipeline/autoscore/__pycache__/
+eval/pipeline/__pycache__/
+eval/runs/
+eval/dataset/__pycache__/

@@ -13,7 +13,6 @@ Outputs layout:
 
 Usage example:
   python eval/pipeline/run_judge_over_dataset.py \
-      --dataset-path ./portal-uxagent-dataset/"UI Descriptions" \
       --run-root eval/runs --limit 10 --mcp-mode stub
 """
 from __future__ import annotations
@@ -29,7 +28,7 @@ REPO_ROOT = CURRENT_FILE.parent.parent.parent  # eval/pipeline/ -> eval/ -> repo
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from eval.dataset.load_dataset import load_dataset  # type: ignore
+from eval.dataset.load_dataset import load_dataset, resolve_dataset_dir  # type: ignore
 from eval.pipeline.judge import process_single_record  # type: ignore
 
 
@@ -92,13 +91,17 @@ def write_summary_md(run_dir: Path, agg: Dict[str, Any], per: List[Dict[str, Any
     (run_dir / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
 
 
-def run_dataset(dataset_path: str | None, run_root: Path, *, mcp_mode: str, mcp_endpoint: str | None, limit: int | None, filter_sub: str | None, model: str, id_prefix: str | None, skip_existing: bool) -> Dict[str, Any]:
-    data = load_dataset(dataset_path)
+def run_dataset(run_root: Path, *, mcp_mode: str, mcp_endpoint: str | None, limit: int | None, filter_sub: str | None, model: str, id_prefix: str | None, skip_existing: bool) -> Dict[str, Any]:
+    print(f"[dataset] Loading from: {resolve_dataset_dir()}")
+    data = load_dataset()
+    print(f"[dataset] Loaded {len(data)} entries")
     titles = list(data.keys())
     if filter_sub:
         titles = [t for t in titles if filter_sub.lower() in t.lower()]
+        print(f"[dataset] Filtered to {len(titles)} entries matching '{filter_sub}'")
     if limit is not None:
         titles = titles[:limit]
+        print(f"[dataset] Limited to {len(titles)} entries")
     run_dir = ensure_run_dir(run_root)
     per: List[Dict[str, Any]] = []
     errors: List[Dict[str, str]] = []
@@ -162,7 +165,6 @@ def run_dataset(dataset_path: str | None, run_root: Path, *, mcp_mode: str, mcp_
 
 def build_parser():
     p = argparse.ArgumentParser(description='Run multi-record judge pipeline.')
-    p.add_argument('--dataset-path', help='Path to UI Descriptions source (optional; loader default).')
     p.add_argument('--run-root', default='eval/runs', help='Root directory for new run.')
     p.add_argument('--mcp-mode', default='stub', choices=['stub','echo','http'], help='MCP acquisition mode (http not implemented).')
     p.add_argument('--mcp-endpoint', help='Endpoint for http mode (future).')
@@ -180,7 +182,6 @@ def main(argv=None):
     run_root = Path(args.run_root)
     run_root.mkdir(parents=True, exist_ok=True)
     summary = run_dataset(
-        dataset_path=args.dataset_path,
         run_root=run_root,
         mcp_mode=args.mcp_mode,
         mcp_endpoint=args.mcp_endpoint,

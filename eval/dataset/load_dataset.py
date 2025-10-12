@@ -1,44 +1,42 @@
 """
 Dataset loader for UI Descriptions from portal-uxagent-dataset.
 
-This script reads the UI Description dataset and returns it as a dictionary
-where the key is the folder name (title) and the value is the UI description content.
+Hard-coded to always load from: <repo-root>/portal-uxagent-dataset/UI Descriptions
 """
 
-import os
 from pathlib import Path
 from typing import Dict
 
 
-def load_dataset(dataset_path: str = None) -> Dict[str, str]:
+def resolve_dataset_dir() -> Path:
     """
-    Load the UI Descriptions dataset from the portal-uxagent-dataset folder.
-    
-    Args:
-        dataset_path: Path to the 'UI Descriptions' folder. 
-                     If None, will use the default relative path.
+    Resolve the absolute path to the UI Descriptions dataset.
+    Based on this file's location: eval/dataset/load_dataset.py
+    Navigates up: eval/dataset -> eval -> portal-ux-agent -> ux-agent (workspace root)
+    """
+    current_file = Path(__file__).resolve()
+    repo_root = current_file.parent.parent.parent  # -> portal-ux-agent
+    workspace_root = repo_root.parent  # -> ux-agent (contains portal-ux-agent & portal-uxagent-dataset)
+    dataset_dir = workspace_root / "portal-uxagent-dataset" / "UI Descriptions"
+    return dataset_dir
+
+
+def load_dataset() -> Dict[str, str]:
+    """
+    Load the UI Descriptions dataset.
     
     Returns:
         A dictionary where:
-        - key: folder name (title) - e.g., "001_Portal for Bug triage including a summary of the last reported bugs"
+        - key: folder name (title) - e.g., "001_Portal for Bug triage..."
         - value: content of ui-description.md file
-    
-    Example:
-        >>> dataset = load_dataset()
-        >>> for title, description in dataset.items():
-        ...     print(f"Title: {title}")
-        ...     print(f"Description length: {len(description)} chars")
     """
-    if dataset_path is None:
-        # Default path - assumes script is in portal-ux-agent/eval/dataset/
-        # and dataset is in portal-uxagent-dataset/UI Descriptions/
-        script_dir = Path(__file__).parent
-        dataset_path = script_dir.parent.parent.parent / "portal-uxagent-dataset" / "UI Descriptions"
-    else:
-        dataset_path = Path(dataset_path)
+    dataset_path = resolve_dataset_dir()
     
     if not dataset_path.exists():
-        raise FileNotFoundError(f"Dataset path not found: {dataset_path}")
+        raise FileNotFoundError(
+            f"Dataset path not found: {dataset_path}\n"
+            f"Expected: <repo-root>/portal-uxagent-dataset/UI Descriptions/"
+        )
     
     dataset = {}
     
@@ -82,6 +80,7 @@ def main():
     """
     try:
         # Load the dataset
+        print(f"Resolved dataset directory: {resolve_dataset_dir()}\n")
         dataset = load_dataset()
         
         # Print dataset info
