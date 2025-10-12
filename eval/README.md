@@ -2,6 +2,16 @@
 
 This folder contains a lightweight, reproducible evaluation harness for the portal UX agent.
 
+# How it works
+- Read data set
+    - For each evaluation dataset record,
+        - (1) Find the UI description
+        - (2) Call MCP tool, pass the UI Description to get result from UX Agent - call it "UX Agent Output"
+        - (3) Leverage AI to understand what the UI description intented to render
+        - (4) Leverage AI to understand what the UX Agent rendered by understanding the "UX Agent Output"
+        - Leverage LLMJudge to give scores by comparint the (3) and (4)
+        
+
 ## Goals
 - Track scenario evolution over time.
 - Score generations with a consistent rubric.
