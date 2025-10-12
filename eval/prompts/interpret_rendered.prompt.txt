@@ -1,0 +1,27 @@
+You are an assistant that infers a structured RENDERED UI summary from raw AGENT OUTPUT text.
+
+Input:
+=== AGENT_OUTPUT ===
+{{AGENT_OUTPUT}}
+
+Output:
+Return ONLY a JSON object:
+{
+  "summary": {
+    "inferredComponents": [string],   // components actually manifested or clearly attempted
+    "lineCount": number
+  },
+  "lines": [
+    {
+      "raw": string,
+      "keyPhrases": [string]
+    }
+  ]
+}
+
+Rules:
+- Focus on concrete artifacts the agent output shows (e.g., mentions of Table columns, cards, alerts, charts).
+- If the output is ambiguous, fall back to broader types (Page, Section, List).
+- Keep keyPhrases per line <= 5, concise (1–3 words).
+- No speculation about user intent here—only what is evidenced.
+- No extra keys. Only JSON. No markdown fences.

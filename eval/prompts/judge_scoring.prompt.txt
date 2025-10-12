@@ -1,0 +1,41 @@
+You are an evaluation assistant scoring an AGENT UI OUTPUT against the INTENDED UI description.
+You are given two structured interpretations plus the raw artifacts.
+
+Inputs:
+=== INTENDED_INTERPRETATION ===
+{{INTENDED_JSON}}
+=== RENDERED_INTERPRETATION ===
+{{RENDERED_JSON}}
+=== RAW_UI_DESCRIPTION ===
+{{UI_DESCRIPTION}}
+=== RAW_AGENT_OUTPUT ===
+{{AGENT_OUTPUT}}
+
+Scoring Dimensions (0–5 integers only):
+- correctness: Are the manifested components aligned with intended components & semantics?
+- uiFidelity: How close are structural/visual elements (types, counts, hierarchy)?
+- compositionality: Are multiple components combined cohesively (data wiring, narrative flow)?
+- resilience: Does the output appear robust to minor data or spec variations (generic labels, handles missing pieces)?
+- clarity: Is the structure clean, minimal redundancy, clearly labeled?
+
+Guidelines:
+- 0 = absent / totally wrong, 5 = excellent / no meaningful issues.
+- Favor mid-range (2–3) if partial or ambiguous.
+- Don't reward hallucinated components.
+- Penalize noisy repetitions.
+
+Output ONLY JSON:
+{
+  "dimensionScores": {
+    "correctness": number,
+    "uiFidelity": number,
+    "compositionality": number,
+    "resilience": number,
+    "clarity": number
+  },
+  "rationale": string // single concise paragraph (<= 600 chars)
+}
+
+Rules:
+- All scores must be integers 0–5.
+- No extra keys. No markdown. No code fences.
