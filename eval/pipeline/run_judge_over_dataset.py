@@ -21,8 +21,16 @@ import argparse, json, re, statistics, datetime
 from pathlib import Path
 from typing import Dict, Any, List
 
-from eval.dataset.load_dataset import load_dataset
-from eval.pipeline.judge import process_single_record
+# Allow running this script directly (python eval/pipeline/run_judge_over_dataset.py)
+# by ensuring the repository root is on sys.path for absolute-style imports.
+import sys
+CURRENT_FILE = Path(__file__).resolve()
+REPO_ROOT = CURRENT_FILE.parent.parent.parent  # eval/pipeline/ -> eval/ -> repo root
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from eval.dataset.load_dataset import load_dataset  # type: ignore
+from eval.pipeline.judge import process_single_record  # type: ignore
 
 
 def _now_iso() -> str:
