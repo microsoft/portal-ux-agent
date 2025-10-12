@@ -1,1 +1,0 @@
-# autoscore package initializer

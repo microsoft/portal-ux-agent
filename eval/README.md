@@ -17,12 +17,18 @@ This folder contains a lightweight, reproducible evaluation harness for the port
 | `runs/`      | Auto-created timestamped outputs + scores. |
 | `scripts/`   | Orchestration, scoring, aggregation utilities. |
 
-## Quick Start (Stub Judge)
+## Quick Start (Python Stub Judge)
+Run the Python evaluation harness directly (cross‑platform):
 ```pwsh
-pwsh ./eval/scripts/run-eval.ps1 -UiPort 3000 -McpPort 3001 -UseWs -JudgeModel "stub-model" -ReuseContainer
+python ./eval/pipeline/run_eval.py --dataset eval/dataset --out eval/runs --model stub-model
 ```
 
-If the container is not running the script will build and start it.
+Optional flags (if implemented):
+- `--limit N` limit number of scenarios
+- `--filter KEYWORD` only scenarios whose filename contains keyword
+- `--dry-run` parse dataset only, no judge calls
+
+If you previously used the PowerShell wrapper, it's been removed—`run_eval.py` is now the single canonical entrypoint.
 
 ## Adding a Scenario
 1. Create `eval/scenarios/scenario_XX_label.txt`.
