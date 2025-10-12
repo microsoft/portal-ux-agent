@@ -38,7 +38,7 @@ eval/runs/<timestamp>/
 ```
 
 ## Judge Integration
-Replace the placeholder model call in `judge.ts` with a real provider. Implement a function returning the required JSON shape (see `llm-judge-prompt.txt`).
+Replace the placeholder model call in `judge.py` with a real provider. Implement a function returning the required JSON shape (see `llm-judge-prompt.txt`).
 
 Supported future integrations (planned):
 - Azure OpenAI (Chat Completions) via env vars
@@ -47,6 +47,37 @@ Supported future integrations (planned):
 
 ## Metrics / Dimensions
 See `rubric.md` for the full scoring rubric. Overall score = mean of included numeric dimensions.
+
+## Autoscore (Automated Scoring)
+The evaluation system includes **autoscore** - a deterministic, programmatic validation system (in `pipeline/autoscore/`) that checks UI composition without using an LLM.
+
+### What Autoscore Validates
+1. **Component Coverage** - Are the required component types present? (e.g., 3 KpiCards, 1 Table)
+2. **Property Fidelity** - Do components have expected props with correct values?
+
+### How It Works
+- Flattens the component tree into analyzable nodes
+- Matches against `expected_components` defined in dataset items
+- Supports multiple validation types:
+  - **Exact match**: `"status"` must equal exactly "status"
+  - **One-of**: `["active", "pending"]` must be one of these values
+  - **Regex**: `{"regex": "\\d{4}"}` pattern matching
+  - **Existence**: `{"exists": true}` just checks prop is present
+
+### Output Metrics
+Returns numeric scores (0.0-1.0):
+- `componentCoverage`: Percentage of expected components found
+- `propFidelity`: Percentage of required props that match specifications
+
+### Autoscore vs LLM Judge
+| Autoscore | LLM Judge |
+|-----------|-----------|
+| Fast & deterministic | Slower, requires API |
+| Reproducible | May vary slightly |
+| Only checks structure | Evaluates semantics & quality |
+| Needs explicit specs | Understands natural language intent |
+
+Both are used together: autoscore provides objective structural validation, while the LLM judge evaluates holistic quality (correctness, compositionality, clarity). Autoscore metrics can influence judge scoring - for example, low component coverage caps the overall score.
 
 ## Roadmap Ideas
 - DOM parser to extract used component classes

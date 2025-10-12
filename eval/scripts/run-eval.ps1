@@ -27,23 +27,8 @@ function Get-PythonCmd {
 
 $pythonCmd = Get-PythonCmd
 
-if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-  if (-not $pythonCmd) { throw 'Neither Node.js nor Python found. Install one runtime.' }
-}
-
-# Compile TypeScript judge (fallback) if Node present and TS source exists
-$tsJudge = Join-Path $PSScriptRoot 'judge.ts'
-if ((Test-Path $tsJudge) -and (Get-Command node -ErrorAction SilentlyContinue)) {
-  $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-  Push-Location $repoRoot
-  try {
-    if (Test-Path './tsconfig.json') {
-      npx tsc --pretty false 2>$null
-    } else {
-      if (-not (Get-Command tsc -ErrorAction SilentlyContinue)) { npm install typescript --no-save | Out-Null }
-      npx tsc ./eval/scripts/judge.ts --target ES2020 --module commonjs --outDir ./eval/scripts 2>$null
-    }
-  } finally { Pop-Location }
+if (-not $pythonCmd) {
+  throw 'Python not found. Please install Python 3.x to run the evaluation.'
 }
 
 $runId = (Get-Date -Format 'yyyyMMdd_HHmmss')
@@ -51,7 +36,7 @@ $runDir = Join-Path $RunsRoot $runId
 $rawDir = Join-Path $runDir 'raw'
 New-Item -ItemType Directory -Path $rawDir -Force | Out-Null
 Write-Host "=== Eval Run: $runId ===" -ForegroundColor Cyan
-Write-Host "Judge runtime preference: $(if ($pythonCmd) {'Python'} else {'Node'})" -ForegroundColor DarkGray
+Write-Host "Judge runtime: Python" -ForegroundColor DarkGray
 
 # Container management
 $containerName = 'portal-ux-agent-eval'
@@ -107,7 +92,7 @@ foreach ($file in $scenarioFiles) {
 $manifestPath = Join-Path $runDir 'manifest.json'
 $manifest | ConvertTo-Json -Depth 6 | Set-Content -Path $manifestPath -NoNewline
 
-# Judge pass (Python preferred, Node fallback)
+# Judge pass (Python only)
 $scoreResults = @()
 foreach ($entry in $manifest.scenarios) {
   $scenarioId = $entry.id
@@ -117,13 +102,8 @@ foreach ($entry in $manifest.scenarios) {
   $expectedPath   = Join-Path $scenarioOutDir 'expected.json'
   $expectedArg = (Test-Path $expectedPath) ? $expectedPath : ''
 
-  if ($pythonCmd) {
-    & $pythonCmd (Join-Path $PSScriptRoot 'judge.py') `
-      $scenarioId $scenarioPath $agentOutputPath $RubricPath $expectedArg $JudgeModel | Out-Null
-  } else {
-    node (Join-Path $PSScriptRoot 'judge.js') `
-      $scenarioId $scenarioPath $agentOutputPath $RubricPath $expectedArg $JudgeModel | Out-Null
-  }
+  & $pythonCmd (Join-Path $PSScriptRoot 'judge.py') `
+    $scenarioId $scenarioPath $agentOutputPath $RubricPath $expectedArg $JudgeModel | Out-Null
 
   $score = Get-Content -Path (Join-Path $scenarioOutDir 'score.json') -Raw | ConvertFrom-Json
   $scoreResults += $score
