@@ -1,4 +1,0 @@
-Create a simple operational dashboard showing:
-- 3 KPI metrics (Active Users, Error Rate %, Avg Latency ms)
-- A table of the last 10 deployments with status
-Include a filter control for environment (dev/staging/prod).

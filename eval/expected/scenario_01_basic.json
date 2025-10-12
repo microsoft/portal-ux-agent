@@ -1,5 +1,0 @@
-{
-  "requiredComponents": ["KpiCard", "Table", "Select"],
-  "recommendedKpiCount": 3,
-  "requiredFilters": ["environment"]
-}
