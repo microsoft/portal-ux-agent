@@ -1,4 +1,4 @@
 ---
 mode: agent
 ---
-Run tests\validate-docker.ps1
+Run tests\e2e-with-docker.ps1
