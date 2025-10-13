@@ -159,20 +159,66 @@ def process_single_record(record_path: Path, out_dir: Path, *, ui_key: str, mcp_
     for p in (PROMPT_INTENDED, PROMPT_RENDERED, PROMPT_JUDGE):
         _ensure_prompt(p)
 
+    # STEP 1: load record & extract UI description (log input/output)
     record = load_record(record_path)
     record_id = str(record.get("id") or record_path.stem)
     ui_description = extract_ui_description(record, ui_key=ui_key)
+    _write_json(out_dir / "step1_input.json", {
+        "recordPath": str(record_path),
+        "uiKey": ui_key,
+        "recordKeys": list(record.keys())
+    })
+    _write_json(out_dir / "step1_output.json", {
+        "recordId": record_id,
+        "uiDescriptionPreview": ui_description[:400],
+        "uiDescriptionLength": len(ui_description)
+    })
+
+    # STEP 2: obtain agent output (log input/output)
     agent_output = _call_mcp_tool(ui_description, mode=mcp_mode, endpoint=mcp_endpoint)
+    _write_json(out_dir / "step2_input.json", {
+        "uiDescriptionLength": len(ui_description),
+        "mcpMode": mcp_mode,
+        "mcpEndpoint": mcp_endpoint
+    })
+    _write_json(out_dir / "step2_output.json", {
+        "agentOutputPreview": agent_output[:400],
+        "agentOutputLength": len(agent_output)
+    })
 
     intended_prompt = _read_prompt(PROMPT_INTENDED)
     rendered_prompt = _read_prompt(PROMPT_RENDERED)
     judge_prompt    = _read_prompt(PROMPT_JUDGE)
 
+    # STEP 3: intended interpretation (log input/output)
+    _write_json(out_dir / "step3_input.json", {
+        "promptTemplate": PROMPT_INTENDED.name,
+        "promptCharCount": len(intended_prompt),
+        "uiDescriptionLength": len(ui_description)
+    })
     intended_obj = llm_interpret_intended(ui_description, intended_prompt)
-    rendered_obj = llm_interpret_rendered(agent_output, rendered_prompt)
-    judge_obj    = llm_judge(intended_obj, rendered_obj, judge_prompt, ui_description, agent_output)
+    _write_json(out_dir / "step3_output.json", intended_obj)
 
-    # Write artifacts
+    # STEP 4: rendered interpretation (log input/output)
+    _write_json(out_dir / "step4_input.json", {
+        "promptTemplate": PROMPT_RENDERED.name,
+        "promptCharCount": len(rendered_prompt),
+        "agentOutputLength": len(agent_output)
+    })
+    rendered_obj = llm_interpret_rendered(agent_output, rendered_prompt)
+    _write_json(out_dir / "step4_output.json", rendered_obj)
+
+    # STEP 5: judge scoring (log input/output)
+    _write_json(out_dir / "step5_input.json", {
+        "promptTemplate": PROMPT_JUDGE.name,
+        "promptCharCount": len(judge_prompt),
+        "intendedKeys": list(intended_obj.keys()),
+        "renderedKeys": list(rendered_obj.keys())
+    })
+    judge_obj    = llm_judge(intended_obj, rendered_obj, judge_prompt, ui_description, agent_output)
+    _write_json(out_dir / "step5_output.json", judge_obj)
+
+    # Write existing artifacts
     _write_json(out_dir / "record.json", record)
     _write_text(out_dir / "ui_description.txt", ui_description)
     _write_text(out_dir / "agent_output.txt", agent_output)
@@ -203,7 +249,8 @@ def process_single_record(record_path: Path, out_dir: Path, *, ui_key: str, mcp_
             "intended": PROMPT_INTENDED.name,
             "rendered": PROMPT_RENDERED.name,
             "judge": PROMPT_JUDGE.name
-        }
+        },
+        "stepLogging": True
     }
     _write_json(out_dir / "meta.json", meta)
 
