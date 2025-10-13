@@ -152,73 +152,42 @@ def llm_judge(intended: dict, rendered: dict, template: str, ui_description: str
     return result
 
 def process_single_record(record_path: Path, out_dir: Path, *, ui_key: str, mcp_mode: str, mcp_endpoint: Optional[str], model: str) -> dict:
-    # Env sanity (endpoint + either API key or AAD implied in helper) - rely on url builder in aoai_chat
+    # Env sanity
     _require_env("AZURE_OPENAI_ENDPOINT")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     for p in (PROMPT_INTENDED, PROMPT_RENDERED, PROMPT_JUDGE):
         _ensure_prompt(p)
 
-    # STEP 1: load record & extract UI description (log input/output)
+    step_log = []  # consolidated per-record log
+
+    # STEP 1
     record = load_record(record_path)
     record_id = str(record.get("id") or record_path.stem)
     ui_description = extract_ui_description(record, ui_key=ui_key)
-    _write_json(out_dir / "step1_input.json", {
-        "recordPath": str(record_path),
-        "uiKey": ui_key,
-        "recordKeys": list(record.keys())
-    })
-    _write_json(out_dir / "step1_output.json", {
-        "recordId": record_id,
-        "uiDescriptionPreview": ui_description[:400],
-        "uiDescriptionLength": len(ui_description)
-    })
+    step_log.append({"step":1,"name":"load_record","recordId":record_id,"uiDescriptionLength":len(ui_description),"recordKeys":list(record.keys())})
 
-    # STEP 2: obtain agent output (log input/output)
+    # STEP 2
     agent_output = _call_mcp_tool(ui_description, mode=mcp_mode, endpoint=mcp_endpoint)
-    _write_json(out_dir / "step2_input.json", {
-        "uiDescriptionLength": len(ui_description),
-        "mcpMode": mcp_mode,
-        "mcpEndpoint": mcp_endpoint
-    })
-    _write_json(out_dir / "step2_output.json", {
-        "agentOutputPreview": agent_output[:400],
-        "agentOutputLength": len(agent_output)
-    })
+    step_log.append({"step":2,"name":"mcp_output","mode":mcp_mode,"agentOutputLength":len(agent_output)})
 
     intended_prompt = _read_prompt(PROMPT_INTENDED)
     rendered_prompt = _read_prompt(PROMPT_RENDERED)
     judge_prompt    = _read_prompt(PROMPT_JUDGE)
 
-    # STEP 3: intended interpretation (log input/output)
-    _write_json(out_dir / "step3_input.json", {
-        "promptTemplate": PROMPT_INTENDED.name,
-        "promptCharCount": len(intended_prompt),
-        "uiDescriptionLength": len(ui_description)
-    })
+    # STEP 3
     intended_obj = llm_interpret_intended(ui_description, intended_prompt)
-    _write_json(out_dir / "step3_output.json", intended_obj)
+    step_log.append({"step":3,"name":"intended","keys":list(intended_obj.keys())})
 
-    # STEP 4: rendered interpretation (log input/output)
-    _write_json(out_dir / "step4_input.json", {
-        "promptTemplate": PROMPT_RENDERED.name,
-        "promptCharCount": len(rendered_prompt),
-        "agentOutputLength": len(agent_output)
-    })
+    # STEP 4
     rendered_obj = llm_interpret_rendered(agent_output, rendered_prompt)
-    _write_json(out_dir / "step4_output.json", rendered_obj)
+    step_log.append({"step":4,"name":"rendered","keys":list(rendered_obj.keys())})
 
-    # STEP 5: judge scoring (log input/output)
-    _write_json(out_dir / "step5_input.json", {
-        "promptTemplate": PROMPT_JUDGE.name,
-        "promptCharCount": len(judge_prompt),
-        "intendedKeys": list(intended_obj.keys()),
-        "renderedKeys": list(rendered_obj.keys())
-    })
-    judge_obj    = llm_judge(intended_obj, rendered_obj, judge_prompt, ui_description, agent_output)
-    _write_json(out_dir / "step5_output.json", judge_obj)
+    # STEP 5
+    judge_obj = llm_judge(intended_obj, rendered_obj, judge_prompt, ui_description, agent_output)
+    step_log.append({"step":5,"name":"judge","overall":judge_obj.get("overall"),"dimensions":list(judge_obj.get("dimensionScores", {}).keys())})
 
-    # Write existing artifacts
+    # Existing artifact writes
     _write_json(out_dir / "record.json", record)
     _write_text(out_dir / "ui_description.txt", ui_description)
     _write_text(out_dir / "agent_output.txt", agent_output)
@@ -229,13 +198,16 @@ def process_single_record(record_path: Path, out_dir: Path, *, ui_key: str, mcp_
     _write_text(out_dir / "prompt_step5_judge.txt", judge_prompt)
     _write_json(out_dir / "step5_response.json", judge_obj)
 
-    score_payload = {
-        "recordId": record_id,
-        "timestamp": _now_iso(),
-        "model": model,
-        **judge_obj
-    }
+    score_payload = {"recordId": record_id, "timestamp": _now_iso(), "model": model, **judge_obj}
     _write_json(out_dir / "score.json", score_payload)
+
+    # Single consolidated log
+    _write_json(out_dir / "record_steps.json", {
+        "recordId": record_id,
+        "model": model,
+        "mcpMode": mcp_mode,
+        "steps": step_log
+    })
 
     meta = {
         "recordId": record_id,
@@ -250,7 +222,7 @@ def process_single_record(record_path: Path, out_dir: Path, *, ui_key: str, mcp_
             "rendered": PROMPT_RENDERED.name,
             "judge": PROMPT_JUDGE.name
         },
-        "stepLogging": True
+        "consolidatedStepLog": "record_steps.json"
     }
     _write_json(out_dir / "meta.json", meta)
 
