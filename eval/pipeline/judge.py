@@ -32,6 +32,7 @@ import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 import sys
+import requests
 
 try:
     from .tool_aoai import aoai_chat  # uses environment-configured Azure OpenAI deployment
@@ -68,28 +69,88 @@ def extract_ui_description(record: Dict[str, Any], ui_key: str) -> str:
             return str(record[c])
     raise SystemExit("UI description key not found in record.")
 
-def _call_mcp_tool(description: str, mode: str, endpoint: Optional[str]) -> str:
-    if mode == "stub":
-        lines = [l.strip() for l in description.splitlines() if l.strip()]
-        components = []
-        import re as _re
-        patterns = {
-            "KpiCard": r"\b(kpi|metric|count|total)\b",
-            "Table": r"\b(table|list|rows?)\b",
-            "Alert": r"\b(alert|warning|error)\b",
-            "Chart": r"\b(chart|trend|graph)\b",
-        }
-        for comp, pat in patterns.items():
-            if any(_re.search(pat, line, _re.IGNORECASE) for line in lines):
-                components.append({"type": comp})
-        if not components:
-            components.append({"type": "Container"})
-        return json.dumps({"root": {"type": "Page", "children": components}, "_mode": "stub-mcp"}, indent=2)
-    if mode == "echo":
-        return json.dumps({"echo": True, "original": description, "root": {"type": "Page", "children": []}}, indent=2)
-    if mode == "http":
-        raise NotImplementedError("HTTP MCP mode not implemented.")
-    raise SystemExit(f"Unsupported MCP mode: {mode}")
+def _call_mcp_tool(description: str, endpoint: str) -> str:
+    """
+    Call MCP server via HTTP. Fail fast if unavailable.
+    Exits with code 31 if MCP returns an error.
+    """
+    # Health check
+    try:
+        resp = requests.get(f"{endpoint}/mcp/health", timeout=3)
+        if resp.status_code != 200:
+            print(f"ERROR: MCP server at {endpoint} unhealthy: {resp.status_code}", file=sys.stderr)
+            raise SystemExit(30)
+    except requests.RequestException as e:
+        print(f"ERROR: Cannot reach MCP server at {endpoint}: {e}", file=sys.stderr)
+        raise SystemExit(30)
+    
+    # Call tool
+    payload = {
+        "name": "create_portal_ui",
+        "arguments": {"message": description}
+    }
+    try:
+        resp = requests.post(f"{endpoint}/mcp/tools/call", json=payload, timeout=30)
+        if resp.status_code != 200:
+            print(f"ERROR: MCP tool call failed: {resp.status_code}", file=sys.stderr)
+            raise SystemExit(32)
+        result = resp.json()
+    except requests.RequestException as e:
+        print(f"ERROR: MCP tool call exception: {e}", file=sys.stderr)
+        raise SystemExit(32)
+    except Exception as e:
+        print(f"ERROR: Cannot parse MCP response: {e}", file=sys.stderr)
+        raise SystemExit(33)
+    
+    # Normalize payload
+    normalized = _normalize_mcp_payload(result)
+    if "error" in normalized:
+        print(f"ERROR: MCP returned error: {normalized['error']}", file=sys.stderr)
+        raise SystemExit(31)
+    
+    # Fallback warning
+    if "root" in normalized and normalized["root"].get("type") == "Container" and not normalized["root"].get("children"):
+        print("WARNING: MCP returned empty Container, may indicate incomplete processing.", file=sys.stderr)
+    
+    return json.dumps(normalized, indent=2)
+
+def _normalize_mcp_payload(payload: dict) -> dict:
+    """
+    Normalize various MCP response shapes:
+    - {content: [{text: json_str}]} -> parsed json
+    - {content: [{text: plain_str}]} -> {root: {type: "Container"}}
+    - {result: {...}} -> result
+    - {...} -> passthrough
+    """
+    # Shape 1: {content: [{text: ...}]}
+    if "content" in payload and isinstance(payload["content"], list):
+        for item in payload["content"]:
+            if isinstance(item, dict) and "text" in item:
+                text = item["text"]
+                try:
+                    parsed = json.loads(text)
+                    if isinstance(parsed, dict):
+                        return parsed
+                except Exception:
+                    pass
+                # Fallback for non-JSON text
+                return {"root": {"type": "Container", "children": []}}
+    
+    # Shape 2: {result: ...}
+    if "result" in payload:
+        result = payload["result"]
+        if isinstance(result, dict):
+            return result
+        if isinstance(result, str):
+            try:
+                parsed = json.loads(result)
+                if isinstance(parsed, dict):
+                    return parsed
+            except Exception:
+                pass
+    
+    # Shape 3: Direct dict
+    return payload
 
 def _read_prompt(p: Path) -> str:
     return p.read_text(encoding="utf-8")
@@ -151,7 +212,7 @@ def llm_judge(intended: dict, rendered: dict, template: str, ui_description: str
             result["overall"] = round(sum(scores)/len(scores), 2)
     return result
 
-def process_single_record(record_path: Path, out_dir: Path, *, ui_key: str, mcp_mode: str, mcp_endpoint: Optional[str], model: str) -> dict:
+def process_single_record(record_path: Path, out_dir: Path, *, ui_key: str, mcp_endpoint: str, model: str) -> dict:
     # Env sanity
     _require_env("AZURE_OPENAI_ENDPOINT")
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -168,8 +229,8 @@ def process_single_record(record_path: Path, out_dir: Path, *, ui_key: str, mcp_
     step_log.append({"step":1,"name":"load_record","recordId":record_id,"uiDescriptionLength":len(ui_description),"recordKeys":list(record.keys())})
 
     # STEP 2
-    agent_output = _call_mcp_tool(ui_description, mode=mcp_mode, endpoint=mcp_endpoint)
-    step_log.append({"step":2,"name":"mcp_output","mode":mcp_mode,"agentOutputLength":len(agent_output)})
+    agent_output = _call_mcp_tool(ui_description, endpoint=mcp_endpoint)
+    step_log.append({"step":2,"name":"mcp_output","endpoint":mcp_endpoint,"agentOutputLength":len(agent_output)})
 
     intended_prompt = _read_prompt(PROMPT_INTENDED)
     rendered_prompt = _read_prompt(PROMPT_RENDERED)
@@ -205,7 +266,7 @@ def process_single_record(record_path: Path, out_dir: Path, *, ui_key: str, mcp_
     _write_json(out_dir / "record_steps.json", {
         "recordId": record_id,
         "model": model,
-        "mcpMode": mcp_mode,
+        "mcpEndpoint": mcp_endpoint,
         "steps": step_log
     })
 
@@ -213,7 +274,7 @@ def process_single_record(record_path: Path, out_dir: Path, *, ui_key: str, mcp_
         "recordId": record_id,
         "timestamp": _now_iso(),
         "model": model,
-        "mcpMode": mcp_mode,
+        "mcpEndpoint": mcp_endpoint,
         "uiKey": ui_key,
         "stepsCompleted": [1,2,3,4,5],
         "llmOnly": True,
@@ -229,19 +290,18 @@ def process_single_record(record_path: Path, out_dir: Path, *, ui_key: str, mcp_
     return {"recordId": record_id, "outDir": str(out_dir), "overall": judge_obj.get("overall")}
 
 def build_arg_parser():
-    p = argparse.ArgumentParser(description="LLM-only single-record evaluation (no stub fallbacks).")
+    p = argparse.ArgumentParser(description="LLM-only single-record evaluation (HTTP MCP only).")
     p.add_argument("--record", required=True, help="Path to record JSON file")
     p.add_argument("--out-dir", required=True, help="Output directory for artifacts")
     p.add_argument("--ui-key", default="ui_description", help="Field containing UI description")
-    p.add_argument("--mcp-mode", default="stub", choices=["stub","echo","http"], help="How to synthesize agent output")
-    p.add_argument("--mcp-endpoint", help="Endpoint for MCP when mode=http (not implemented)")
+    p.add_argument("--mcp-endpoint", required=True, help="MCP server HTTP endpoint (e.g. http://localhost:3001)")
     p.add_argument("--model", default=os.environ.get("AZURE_OPENAI_DEPLOYMENT", "deployment"), help="Model/deployment label for metadata only")
     return p
 
 def main(argv: Optional[list[str]] = None) -> int:
     ap = build_arg_parser()
     args = ap.parse_args(argv)
-    summary = process_single_record(Path(args.record), Path(args.out_dir), ui_key=args.ui_key, mcp_mode=args.mcp_mode, mcp_endpoint=args.mcp_endpoint, model=args.model)
+    summary = process_single_record(Path(args.record), Path(args.out_dir), ui_key=args.ui_key, mcp_endpoint=args.mcp_endpoint, model=args.model)
     print(json.dumps({"status": "ok", **summary}, indent=2))
     return 0
 

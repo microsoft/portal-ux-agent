@@ -91,7 +91,7 @@ def write_summary_md(run_dir: Path, agg: Dict[str, Any], per: List[Dict[str, Any
     (run_dir / 'summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
 
 
-def run_dataset(run_root: Path, *, mcp_mode: str, mcp_endpoint: str | None, limit: int | None, filter_sub: str | None, model: str, id_prefix: str | None, skip_existing: bool) -> Dict[str, Any]:
+def run_dataset(run_root: Path, *, mcp_endpoint: str, limit: int | None, filter_sub: str | None, model: str, id_prefix: str | None, skip_existing: bool) -> Dict[str, Any]:
     print(f"[dataset] Loading from: {resolve_dataset_dir()}")
     data = load_dataset()
     print(f"[dataset] Loaded {len(data)} entries")
@@ -132,7 +132,6 @@ def run_dataset(run_root: Path, *, mcp_mode: str, mcp_endpoint: str | None, limi
                 record_path=record_path,
                 out_dir=out_dir,
                 ui_key='ui_description',
-                mcp_mode=mcp_mode,
                 mcp_endpoint=mcp_endpoint,
                 model=model,
             )
@@ -164,10 +163,9 @@ def run_dataset(run_root: Path, *, mcp_mode: str, mcp_endpoint: str | None, limi
 
 
 def build_parser():
-    p = argparse.ArgumentParser(description='Run multi-record judge pipeline.')
+    p = argparse.ArgumentParser(description='Run multi-record judge pipeline (HTTP MCP only).')
     p.add_argument('--run-root', default='eval/runs', help='Root directory for new run.')
-    p.add_argument('--mcp-mode', default='stub', choices=['stub','echo','http'], help='MCP acquisition mode (http not implemented).')
-    p.add_argument('--mcp-endpoint', help='Endpoint for http mode (future).')
+    p.add_argument('--mcp-endpoint', required=True, help='MCP server HTTP endpoint (e.g. http://localhost:3001).')
     p.add_argument('--limit', type=int, help='Limit number of records.')
     p.add_argument('--filter', help='Substring filter applied to titles.')
     p.add_argument('--model', default='stub-model', help='Model label recorded in metadata.')
@@ -183,7 +181,6 @@ def main(argv=None):
     run_root.mkdir(parents=True, exist_ok=True)
     summary = run_dataset(
         run_root=run_root,
-        mcp_mode=args.mcp_mode,
         mcp_endpoint=args.mcp_endpoint,
         limit=args.limit,
         filter_sub=args.filter,
