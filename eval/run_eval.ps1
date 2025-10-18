@@ -87,6 +87,30 @@ if (-not $Model) {
   if ($env:AZURE_OPENAI_DEPLOYMENT) { $Model = $env:AZURE_OPENAI_DEPLOYMENT } else { $Model = "stub-model" }
 }
 
+# MCP server reachability check (http mode only)
+if ($MCPMode -eq 'http' -and $MCPEndpoint) {
+  try {
+    $mcpHealth = "$($MCPEndpoint.TrimEnd('/'))/health"
+    $resp = Invoke-WebRequest -Uri $mcpHealth -Method Head -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop
+    Write-Host "MCP server reachable: $MCPEndpoint (HTTP $($resp.StatusCode))" -ForegroundColor Cyan
+  } catch {
+    Write-Warning "MCP server unreachable at $MCPEndpoint"
+    Write-Warning "Error: $($_.Exception.Message)"
+    $canPrompt = ($Host.UI.SupportsVirtualTerminal -and ($env:CI -ne 'true'))
+    if ($canPrompt) {
+      $ans = Read-Host "Continue without confirmed MCP availability? (y/N)"
+      if ($ans -notin @('y','Y','yes','YES')) {
+        Write-Error "Aborted by user (MCP server unreachable)."
+        exit 10
+      }
+      Write-Host "Proceeding with unreachable MCP server..." -ForegroundColor Yellow
+    } else {
+      Write-Error "Non-interactive or CI environment; aborting due to unreachable MCP server."
+      exit 10
+    }
+  }
+}
+
 $Python = "python"
 $ArgsList = @(
   "eval/pipeline/run_judge_over_dataset.py",
@@ -106,6 +130,7 @@ Write-Host " .env Loaded : $envLoaded"
 Write-Host " DatasetPath : (hard-coded in load_dataset.py)"
 Write-Host " RunRoot     : $RunRoot"
 Write-Host " MCPMode     : $MCPMode"
+if ($MCPEndpoint) { Write-Host " MCP Endpoint: $MCPEndpoint" }
 Write-Host " Model       : $Model"
 if ($Limit)    { Write-Host " Limit       : $Limit" }
 if ($Filter)   { Write-Host " Filter      : $Filter" }
