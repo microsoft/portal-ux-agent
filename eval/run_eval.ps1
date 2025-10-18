@@ -71,7 +71,61 @@ function Import-RepoRootDotEnv {
 
 # Resolve paths relative to this script (which is in eval/)
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path   # eval/
-$envLoaded = Import-RepoRootDotEnv -EnvPath (Join-Path $ScriptDir "../.env")
+$RepoRoot  = (Resolve-Path (Join-Path $ScriptDir "..")).Path
+
+# Virtual environment: use repo-root/.venv only
+$VenvRoot = Join-Path $RepoRoot ".venv"
+$VenvPython = Join-Path $VenvRoot "Scripts\python.exe"
+
+if (-not (Test-Path -LiteralPath $VenvPython)) {
+  Write-Host "Creating virtual environment at $VenvRoot" -ForegroundColor Cyan
+  
+  # Find system Python
+  $sysPython = (Get-Command python -ErrorAction SilentlyContinue)?.Source
+  if (-not $sysPython) { $sysPython = (Get-Command python3 -ErrorAction SilentlyContinue)?.Source }
+  if (-not $sysPython) {
+    Write-Error "No python or python3 found in PATH. Install Python 3.8+ first."
+    exit 40
+  }
+  
+  try {
+    & $sysPython -m venv "$VenvRoot" 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "venv creation returned exit code $LASTEXITCODE" }
+  } catch {
+    if (Test-Path $VenvRoot) { Remove-Item -Recurse -Force $VenvRoot -ErrorAction SilentlyContinue }
+    Write-Error "Failed to create virtual environment: $($_.Exception.Message)"
+    exit 40
+  }
+  
+  if (-not (Test-Path -LiteralPath $VenvPython)) {
+    Write-Error "python.exe not found after venv creation"
+    exit 40
+  }
+  $VenvCreated = $true
+} else {
+  $VenvCreated = $false
+}
+
+Write-Host "Using Python: $VenvPython" -ForegroundColor Cyan
+$pyVersion = & $VenvPython --version 2>&1
+Write-Host "Version: $pyVersion" -ForegroundColor DarkGray
+
+# Install dependencies if requirements.txt exists
+$RequirementsPath = Join-Path $RepoRoot "eval" | Join-Path -ChildPath "pipeline" | Join-Path -ChildPath "requirements.txt"
+if ((Test-Path -LiteralPath $RequirementsPath) -and (Get-Item $RequirementsPath).Length -gt 0) {
+  Write-Host "Installing dependencies..." -ForegroundColor Cyan
+  try {
+    & $VenvPython -m pip install --upgrade pip --quiet 2>&1 | Out-Null
+    & $VenvPython -m pip install -r $RequirementsPath --quiet
+    if ($LASTEXITCODE -ne 0) { throw "pip install failed with exit code $LASTEXITCODE" }
+    Write-Host "  Dependencies installed." -ForegroundColor Green
+  } catch {
+    Write-Error "Dependency installation failed: $($_.Exception.Message)"
+    exit 41
+  }
+}
+
+$envLoaded = Import-RepoRootDotEnv -EnvPath (Join-Path $RepoRoot ".env")
 
 # Derive model if absent
 if (-not $Model) {
@@ -103,7 +157,6 @@ try {
   }
 }
 
-$Python = "python"
 $ArgsList = @(
   "eval/pipeline/run_judge_over_dataset.py",
   "--run-root", $RunRoot,
@@ -117,8 +170,9 @@ if ($SkipExisting) { $ArgsList += @("--skip-existing") }
 
 Write-Host "----------------------------------------------" -ForegroundColor DarkGray
 Write-Host "Multi-record Evaluation Run" -ForegroundColor Green
+Write-Host " Python      : $VenvPython"
+Write-Host " VenvCreated : $VenvCreated"
 Write-Host " .env Loaded : $envLoaded"
-Write-Host " DatasetPath : (hard-coded in load_dataset.py)"
 Write-Host " RunRoot     : $RunRoot"
 Write-Host " MCP Endpoint: $McpEndpoint"
 Write-Host " Model       : $Model"
@@ -130,9 +184,9 @@ if ($env:AZURE_OPENAI_ENDPOINT) { Write-Host " Azure OpenAI Endpoint: $($env:AZU
 Write-Host "----------------------------------------------" -ForegroundColor DarkGray
 
 # Change to parent directory (repo root) to run the Python script
-Push-Location (Join-Path $ScriptDir "..")
+Push-Location $RepoRoot
 try {
-  & $Python @ArgsList
+  & $VenvPython @ArgsList
   $exitCode = $LASTEXITCODE
 } finally {
   Pop-Location
@@ -144,6 +198,8 @@ if ($exitCode -ne 0) {
     31 { "MCP server returned error" }
     32 { "MCP tool call failed (HTTP error)" }
     33 { "Cannot parse MCP response" }
+    40 { "Virtual environment creation failed" }
+    41 { "Dependency installation failed" }
     default { "Evaluation failed" }
   }
   Write-Error "$errMsg (exit code $exitCode)"
