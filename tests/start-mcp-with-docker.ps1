@@ -35,6 +35,18 @@ $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Push-Location $projectRoot
 
 try {
+  # Auto-load .env if present
+  $envFile = Join-Path $projectRoot '.env'
+  if (Test-Path $envFile) {
+    Info "=== Loading .env ==="
+    Get-Content $envFile | Where-Object { $_ -and $_ -notmatch '^\s*#' } | ForEach-Object {
+      if ($_ -match '^(?<k>[^=]+)=(?<v>.*)$') {
+        $k = $Matches.k.Trim(); $v = $Matches.v
+        if ($k) { Set-Item -Path env:$k -Value $v }
+      }
+    }
+  }
+
   Info "=== Checking Docker daemon availability ==="
   try {
     $null = docker version --format '{{.Server.Version}}'
@@ -55,15 +67,43 @@ try {
   if (-not (Test-Path $logsDir)) { New-Item -Path $logsDir -ItemType Directory | Out-Null }
   $logsDirResolved = (Resolve-Path $logsDir).Path
 
+  # Forward Azure/OpenAI + intent env vars from host environment
+  $forwardVars = @(
+    'AZURE_OPENAI_ENDPOINT','AZURE_OPENAI_API_KEY','AZURE_OPENAI_DEPLOYMENT','AZURE_OPENAI_API_VERSION',
+    'AZURE_OPENAI_USE_AAD','AZURE_OPENAI_SCOPE',
+    'INTENT_TIMEOUT_MS','INTENT_LOG_PROMPT',
+    'SEED_SAMPLE','DEFAULT_UI_TEMPLATE','DEFAULT_UI_COMPONENTS_FILE'
+  )
+  $forwardArgs = @()
+  foreach ($name in $forwardVars) {
+    $val = (Get-Item -Path Env:$name -ErrorAction SilentlyContinue).Value
+    if ($val -and $val.Trim()) { $forwardArgs += @('-e', "$name=$($val.Trim())") }
+  }
+  
+  # Set defaults if not present
+  if (-not $env:INTENT_LOG_PROMPT) { $forwardArgs += @('-e','INTENT_LOG_PROMPT=1') }
+  if (-not $env:SEED_SAMPLE) { $forwardArgs += @('-e','SEED_SAMPLE=0') }
+
+  # Warn if Azure OpenAI not configured (MCP tool calls will fail)
+  if (-not $env:AZURE_OPENAI_ENDPOINT) {
+    Warn "Azure OpenAI not configured; MCP tool calls will fail without AZURE_OPENAI_ENDPOINT."
+  }
+
+  # Build intent log path (allow override via env var)
+  $intentLogPath = if ($env:INTENT_PROMPT_LOG) { $env:INTENT_PROMPT_LOG } else { '/app/logs/intent-prompts.log' }
+
   Info "=== Starting container: $containerName ==="
-  $runArgs = @('run','-d','--name',$containerName,
+  $runArgs = @('run','-d','--name',$containerName) + @(
     '-e',"UI_PORT=$uiPort",
     '-e',"MCP_PORT=$mcpPort",
     '-e',"USE_MCP_WS=$useWsFlag",
+    '-e',"INTENT_PROMPT_LOG=$intentLogPath"
+  ) + $forwardArgs + @(
     '-p',"${uiPort}:${uiPort}",
     '-p',"${mcpPort}:${mcpPort}",
     '-v',"${logsDirResolved}:/app/logs",
-    $imageName)
+    $imageName
+  )
   $containerId = docker @runArgs
   if ($LASTEXITCODE -ne 0 -or -not $containerId) { Fail "Container failed to start."; $exitCode = 3; throw }
 
