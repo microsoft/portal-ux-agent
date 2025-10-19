@@ -42,10 +42,49 @@ function normalizeIntent(raw: LlmIntentPayload): Intent {
   };
 }
 
+function defaultSlotFor(template: string, type: string): string {
+  switch (template) {
+    case 'dashboard-cards-grid':
+      return type === 'KpiCard' ? 'kpiRow' : 'cardsGrid';
+    case 'portal-leftnav':
+      return type === 'NavItem' ? 'nav' : 'content';
+    case 'board-kanban':
+      if (type === 'KanbanColumn') return 'columns';
+      if (type === 'KanbanCard') return 'cards';
+      return 'toolbar';
+    default:
+      return 'content';
+  }
+}
+
+function sanitizeRawIntent(raw: any) {
+  const template = typeof raw?.template === 'string' ? raw.template : 'dashboard-cards-grid';
+  const list = Array.isArray(raw?.components) ? raw.components : [];
+  const components = list
+    .filter((component: any) => component && typeof component === 'object')
+    .map((component: any, index: number) => {
+      const type = typeof component.type === 'string' ? component.type.trim() : '';
+      const slot =
+        typeof component.slot === 'string' && component.slot.trim().length > 0
+          ? component.slot.trim()
+          : defaultSlotFor(template, type);
+      const id = typeof component.id === 'string' && component.id.trim().length > 0 ? component.id.trim() : component.id;
+      const library = component.library ?? 'shadcn';
+      const props = component.props && typeof component.props === 'object' ? component.props : {};
+      return { ...component, type, slot, id, library, props, index };
+    })
+    .filter((component: any) => typeof component.type === 'string' && component.type.length > 0)
+    .map(({ index, ...component }: any) => component);
+  const styles = Array.isArray(raw?.styles) ? raw.styles.filter((s: any) => typeof s === 'string') : [];
+  const scripts = Array.isArray(raw?.scripts) ? raw.scripts.filter((s: any) => typeof s === 'string') : [];
+  return { template, components, styles, scripts } as LlmIntentPayload;
+}
+
 export async function processUserIntent(message: string): Promise<Intent> {
   try {
     const raw = await generateIntentLLM(message, { force: true });
-    const parsed = IntentSchema.safeParse(raw);
+    const sanitized = sanitizeRawIntent(raw as any);
+    const parsed = IntentSchema.safeParse(sanitized);
     if (!parsed.success) {
       console.error('[intent] LLM returned invalid schema:', parsed.error.flatten());
       throw new Error('LLM intent JSON did not match schema');
