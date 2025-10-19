@@ -34,6 +34,13 @@ from typing import Any, Dict, Optional
 import sys
 import requests
 
+# Default MCP tool call timeout (seconds). Can be overridden via env MCP_TOOL_TIMEOUT_SEC.
+_DEFAULT_MCP_TIMEOUT = 30
+try:  # Allow increasing (or lowering) via environment variable.
+    _DEFAULT_MCP_TIMEOUT = int(os.environ.get("MCP_TOOL_TIMEOUT_SEC", "90"))  # raise previous 30s to 90s by default
+except Exception:
+    _DEFAULT_MCP_TIMEOUT = 90
+
 try:
     from .tool_aoai import aoai_chat  # uses environment-configured Azure OpenAI deployment
 except Exception as e:  # pragma: no cover
@@ -92,18 +99,39 @@ def _call_mcp_tool(description: str, endpoint: str) -> str:
         "name": "create_portal_ui",
         "arguments": {"message": description}
     }
-    try:
-        resp = requests.post(f"{endpoint}/mcp/tools/call", json=payload, timeout=30)
-        if resp.status_code != 200:
-            print(f"ERROR: MCP tool call failed: {resp.status_code}", file=sys.stderr)
+    timeout_seconds = max(1, _DEFAULT_MCP_TIMEOUT)
+    attempts = 2  # single retry on timeout or transient network error
+    last_exc: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            resp = requests.post(f"{endpoint}/mcp/tools/call", json=payload, timeout=timeout_seconds)
+            if resp.status_code != 200:
+                print(f"ERROR: MCP tool call failed: {resp.status_code}", file=sys.stderr)
+                raise SystemExit(32)
+            try:
+                result = resp.json()
+            except Exception as e:  # JSON parse error
+                print(f"ERROR: Cannot parse MCP response: {e}", file=sys.stderr)
+                raise SystemExit(33)
+            break
+        except requests.Timeout as e:
+            last_exc = e
+            if attempt < attempts:
+                print(f"WARNING: MCP tool call timed out after {timeout_seconds}s (attempt {attempt}/{attempts}), retrying...", file=sys.stderr)
+                continue
+            print(f"ERROR: MCP tool call timeout after {timeout_seconds}s (final attempt)", file=sys.stderr)
             raise SystemExit(32)
-        result = resp.json()
-    except requests.RequestException as e:
-        print(f"ERROR: MCP tool call exception: {e}", file=sys.stderr)
-        raise SystemExit(32)
-    except Exception as e:
-        print(f"ERROR: Cannot parse MCP response: {e}", file=sys.stderr)
-        raise SystemExit(33)
+        except requests.RequestException as e:
+            last_exc = e
+            if attempt < attempts:
+                print(f"WARNING: MCP tool call exception '{e}' (attempt {attempt}/{attempts}), retrying...", file=sys.stderr)
+                continue
+            print(f"ERROR: MCP tool call exception: {e}", file=sys.stderr)
+            raise SystemExit(32)
+    else:  # pragma: no cover - defensive, loop should exit via break/raise
+        if last_exc:
+            print(f"ERROR: MCP tool call failed: {last_exc}", file=sys.stderr)
+            raise SystemExit(32)
     
     # Normalize payload
     normalized = _normalize_mcp_payload(result)
