@@ -111,10 +111,12 @@ def run_dataset(run_root: Path, *, mcp_endpoint: str, limit: int | None, filter_
     run_dir = ensure_run_dir(run_root)
     per: List[Dict[str, Any]] = []
     errors: List[Dict[str, str]] = []
-    for title in titles:
+    for idx, title in enumerate(titles, 1):
         raw = data[title]
         rid_base = sanitize_id(title)
         rid = f"{id_prefix}{rid_base}" if id_prefix else rid_base
+        # Log start of record processing for responsiveness
+        print(f"[record {idx}/{len(titles)}] Starting: title='{title}' id='{rid}' at {_now_iso()}", flush=True)
         out_dir = run_dir / rid
         if skip_existing and (out_dir / 'score.json').exists():
             try:
