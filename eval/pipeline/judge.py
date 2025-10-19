@@ -46,7 +46,10 @@ PROMPT_RENDERED = PROMPTS_DIR / "interpret_rendered.prompt.txt"
 PROMPT_JUDGE    = PROMPTS_DIR / "judge_scoring.prompt.txt"
 
 def _now_iso() -> str:
-    return datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    try:
+        return datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")
+    except Exception:
+        return datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
 
 def _require_env(var: str):
     if not os.environ.get(var):

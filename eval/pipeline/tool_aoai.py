@@ -40,6 +40,7 @@ import time
 import uuid
 import typing as t
 from pathlib import Path
+import datetime
 
 try:
     from azure.identity import DefaultAzureCredential  # type: ignore
@@ -74,6 +75,15 @@ AOAI_PROMPT_LOG_PATH       = _env("AOAI_PROMPT_LOG_PATH", "logs/aoai-prompts.log
 # ---------------------
 # Logging
 # ---------------------
+
+def _now_iso() -> str:
+    """Timezone-aware ISO8601 timestamp with microseconds and Z."""
+    try:
+        return datetime.datetime.now(datetime.UTC).isoformat(timespec="microseconds")
+    except Exception:
+        # Fallback for older Python where datetime.UTC may not exist
+        return datetime.datetime.utcnow().isoformat() + "Z"
+
 
 def _append_log(record: dict) -> None:
     if not AOAI_LOG_PROMPT:
@@ -173,7 +183,7 @@ def aoai_chat(
 
     _append_log({
         "kind": "prompt",
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ", time.gmtime()),
+        "timestamp": _now_iso(),
         "correlationId": corr,
         "messages": messages
     })
@@ -186,7 +196,7 @@ def aoai_chat(
             headers = _build_headers()
             _append_log({
                 "kind": "request",
-                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ", time.gmtime()),
+                "timestamp": _now_iso(),
                 "correlationId": corr,
                 "url": url,
                 "method": "POST",
@@ -205,7 +215,7 @@ def aoai_chat(
 
             _append_log({
                 "kind": "response",
-                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ", time.gmtime()),
+                "timestamp": _now_iso(),
                 "correlationId": corr,
                 "status": status,
                 "ok": 200 <= status < 300,
@@ -240,7 +250,7 @@ def aoai_chat(
 
             _append_log({
                 "kind": "parsed",
-                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ", time.gmtime()),
+                "timestamp": _now_iso(),
                 "correlationId": corr,
                 "parsed": parsed
             })
@@ -256,7 +266,7 @@ def aoai_chat(
                 transient = True
             _append_log({
                 "kind": "error",
-                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ", time.gmtime()),
+                "timestamp": _now_iso(),
                 "correlationId": corr,
                 "error": msg,
                 "attempt": attempt,

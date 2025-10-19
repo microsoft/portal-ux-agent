@@ -33,7 +33,10 @@ from eval.pipeline.judge import process_single_record  # type: ignore
 
 
 def _now_iso() -> str:
-    return datetime.datetime.utcnow().isoformat() + "Z"
+    try:
+        return datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")
+    except Exception:
+        return datetime.datetime.utcnow().isoformat() + "Z"
 
 
 def sanitize_id(name: str) -> str:
@@ -44,7 +47,10 @@ def sanitize_id(name: str) -> str:
 
 
 def ensure_run_dir(root: Path) -> Path:
-    run_id = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    try:
+        run_id = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d_%H%M%S")
+    except Exception:
+        run_id = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     rd = root / run_id
     rd.mkdir(parents=True, exist_ok=True)
     return rd
