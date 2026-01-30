@@ -30,6 +30,20 @@ export async function renderReactUI(composition: UIComposition): Promise<string>
     .join('');
 
   const styleLinks = (composition.styles || []).map((style: string) => `<link rel="stylesheet" href="${style}">`).join('');
+  const scriptTags = (composition.scripts || []).map((script: string) => `<script src="${script}"><\/script>`).join('\n  ');
+
+  // Chat panel HTML
+  const chatPanelHTML = `
+    <div id="chat-panel" class="collapsed">
+      <div class="chat-header">UX Agent Chat</div>
+      <div class="chat-messages"></div>
+      <div class="chat-input-area">
+        <textarea class="chat-input" placeholder="Describe the UI you want..." rows="1"></textarea>
+        <button class="chat-send-btn" title="Send">➤</button>
+      </div>
+    </div>
+    <button id="chat-toggle-btn" title="Toggle Chat">💬</button>
+  `;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -38,6 +52,7 @@ export async function renderReactUI(composition: UIComposition): Promise<string>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal UI - ${composition.sessionId}</title>
   ${styleLinks}
+  <link rel="stylesheet" href="/styles/chat.css">
   <style>
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #111827; }
     a { color: inherit; }
@@ -46,6 +61,9 @@ export async function renderReactUI(composition: UIComposition): Promise<string>
 <body>
   ${filledHTML}
   ${leftover}
+  ${chatPanelHTML}
+  <script src="/scripts/chat.js"><\/script>
+  ${scriptTags}
 </body>
 </html>`;
 }

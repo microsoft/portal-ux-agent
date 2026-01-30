@@ -1,5 +1,5 @@
 // Simple HTTP Server without external dependencies
-import { createServer } from 'http';
+import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { parse, fileURLToPath } from 'url';
 import { readFileSync, existsSync } from 'fs';
 import { dirname, join, resolve } from 'path';
@@ -7,6 +7,8 @@ import { getCompositionByUser } from './ui-builder-agent/ui-renderer.js';
 import { seedStaticCompositionIfNeeded } from './ui-builder-agent/static-seed.js';
 import { renderReactUI } from './server/web/react-renderer.js';
 import { DEFAULT_USER_ID } from './shared/config.js';
+import { processUserIntent } from './ux-architect-agent/intent-processor.js';
+import { renderUI } from './ui-builder-agent/ui-renderer.js';
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
 const SAMPLE_REQUEST_DIRS = [
@@ -71,6 +73,11 @@ class SimpleWebServer {
       } else if (pathname.startsWith('/ui/')) {
         const userId = pathname.split('/ui/')[1];
         this.handleUIRequest(userId, res);
+      } else if (pathname.startsWith('/api/ui-html/')) {
+        const userId = pathname.split('/api/ui-html/')[1];
+        this.handleUIHtmlRequest(userId, res);
+      } else if (pathname === '/api/chat' && req.method === 'POST') {
+        this.handleChatRequest(req, res);
       } else if (pathname.startsWith('/api/compositions/')) {
         const userId = pathname.split('/api/compositions/')[1];
         this.handleAPIRequest(userId, res);
@@ -146,6 +153,74 @@ class SimpleWebServer {
     }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(composition));
+  }
+
+  private handleUIHtmlRequest(userId: string, res: ServerResponse) {
+    const composition = getCompositionByUser(userId);
+    if (!composition) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Composition not found');
+      return;
+    }
+
+    renderReactUI(composition)
+      .then(html => {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(html);
+      })
+      .catch(err => {
+        console.error('[ui-html] Failed to render composition', err);
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Failed to render UI');
+      });
+  }
+
+  private handleChatRequest(req: IncomingMessage, res: ServerResponse) {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', async () => {
+      try {
+        const { userId = DEFAULT_USER_ID, message } = JSON.parse(body);
+        
+        if (!message || typeof message !== 'string') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Message is required' }));
+          return;
+        }
+
+        console.log(`[chat] Processing message for user "${userId}": ${message.slice(0, 100)}...`);
+
+        // Process intent directly using the intent processor
+        const intent = await processUserIntent(message);
+        
+        // Render UI and store composition
+        const composition = await renderUI(intent, userId);
+        
+        console.log(`[chat] Generated UI for user "${userId}" with ${composition.components.length} components`);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          userId,
+          sessionId: composition.sessionId,
+          template: composition.template,
+          componentCount: composition.components.length,
+          viewUrl: `/ui/${encodeURIComponent(userId)}`
+        }));
+      } catch (err: any) {
+        console.error('[chat] Failed to process message:', err?.message || err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ 
+          success: false, 
+          error: err?.message || 'Failed to generate UI' 
+        }));
+      }
+    });
+    req.on('error', (err) => {
+      console.error('[chat] Request error:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Request error' }));
+    });
   }
 
   private handlePlaygroundWs(res: any) {
