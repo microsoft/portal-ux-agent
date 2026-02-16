@@ -1,0 +1,28 @@
+{
+  "name": "Portal UX Agent",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "features": {
+    "ghcr.io/devcontainers/features/azure-cli:1": {}
+  },
+  "forwardPorts": [3000, 3001],
+  "postCreateCommand": "npm ci",
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.azure,target=/home/node/.azure,type=bind,consistency=cached"
+  ],
+  "remoteEnv": {
+    "AZURE_CONFIG_DIR": "/home/node/.azure"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-azurefunctions",
+        "ms-vscode.azure-account",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  }
+}
