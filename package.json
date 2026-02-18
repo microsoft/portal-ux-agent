@@ -13,7 +13,7 @@
     "demo": "node --loader ts-node/esm src/demo.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.18.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/react": "^19.1.13",
