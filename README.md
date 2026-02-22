@@ -108,4 +108,8 @@ pwsh tests/validate-docker.ps1 -Message "ui smoke"
 
 Run against a Docker container (ensure it's running on ports 3000/3001). Include an optional `userId` by adding `"userId":"alice"` inside the `arguments` object of the tool call JSON.
 
+## Published Paper
+
+[Portal UX Agent — A Plug-and-Play Engine for Rendering UIs from Natural-Language Specifications](https://arxiv.org/abs/2511.00843)
+
 
