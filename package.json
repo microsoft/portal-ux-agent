@@ -10,22 +10,24 @@
     "dev:web": "node --loader ts-node/esm src/simple-web-server.ts",
     "dev:combined": "node --loader ts-node/esm src/start-combined.ts",
     "build": "tsc",
-    "demo": "node --loader ts-node/esm src/demo.ts"
+    "demo": "node --loader ts-node/esm src/demo.ts",
+    "open-ui-default": "start http://localhost:3000/ui/default"
   },
   "dependencies": {
+    "@azure/identity": "^4.4.0",
     "@modelcontextprotocol/sdk": "^1.18.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "cors": "^2.8.5",
+    "dotenv": "^17.3.1",
     "express": "^5.1.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "uuid": "^13.0.0",
     "ws": "^8.18.3",
-    "zod": "^4.1.8",
-    "@azure/identity": "^4.4.0"
+    "zod": "^4.1.8"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -34,4 +36,3 @@
     "typescript": "^5.3.0"
   }
 }
-
