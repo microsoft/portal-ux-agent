@@ -14,7 +14,7 @@
     "open-ui-default": "start http://localhost:3000/ui/default"
   },
   "dependencies": {
-    "@azure/identity": "^4.4.0",
+    "@azure/identity": "^4.13.1",
     "@modelcontextprotocol/sdk": "^1.18.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
@@ -25,7 +25,7 @@
     "express": "^5.1.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "uuid": "^13.0.0",
+    "uuid": "^14.0.0",
     "ws": "^8.18.3",
     "zod": "^4.1.8"
   },
